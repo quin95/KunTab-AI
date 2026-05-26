@@ -674,6 +674,27 @@ select:focus {
   cursor: grabbing;
 }
 
+/* Drag and Drop States for Favorites */
+.favorite-grid.dragging-active .favorite-card * {
+  pointer-events: none;
+}
+
+.favorite-card.dragging {
+  opacity: 0.3;
+  border: 2px dashed var(--primary) !important;
+  background: var(--bg) !important;
+  transform: scale(0.92);
+  box-shadow: none !important;
+}
+
+.favorite-card.drag-over {
+  border-color: var(--primary) !important;
+  background: var(--primary-soft) !important;
+  transform: scale(1.08) translateY(-6px) !important;
+  box-shadow: var(--shadow-lg), 0 0 0 4px var(--primary-soft) !important;
+  z-index: 10;
+}
+
 .favorite-main {
   border: 0;
   background: transparent;

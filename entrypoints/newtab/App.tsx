@@ -321,6 +321,8 @@ export default function App() {
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
   const [dragFavoriteId, setDragFavoriteId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [dragOverFavoriteId, setDragOverFavoriteId] = useState<string | null>(null);
 
   const [backupFolderId, setBackupFolderId] = useState('');
   const [importing, setImporting] = useState(false);
@@ -860,16 +862,34 @@ export default function App() {
                   {text.manageFavorites} <ChevronRight size={14} />
                 </button>
               </div>
-              <div className="favorite-grid">
+              <div className={`favorite-grid${activeDragId ? ' dragging-active' : ''}`}>
                 {favoriteBookmarks.map((bookmark) => (
                   <div
-                    className="favorite-card"
+                    className={`favorite-card${activeDragId === bookmark.id ? ' dragging' : ''}${dragOverFavoriteId === bookmark.id ? ' drag-over' : ''}`}
                     key={bookmark.id}
                     draggable
-                    onDragStart={() => setDragFavoriteId(bookmark.id)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={() => onDropFavorite(bookmark.id)}
-                    onDragEnd={() => setDragFavoriteId(null)}
+                    onDragStart={() => {
+                      setDragFavoriteId(bookmark.id);
+                      setTimeout(() => {
+                        setActiveDragId(bookmark.id);
+                      }, 0);
+                    }}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (dragFavoriteId && dragFavoriteId !== bookmark.id) {
+                        setDragOverFavoriteId(bookmark.id);
+                      }
+                    }}
+                    onDragLeave={() => setDragOverFavoriteId(null)}
+                    onDrop={() => {
+                      onDropFavorite(bookmark.id);
+                      setDragOverFavoriteId(null);
+                    }}
+                    onDragEnd={() => {
+                      setDragFavoriteId(null);
+                      setActiveDragId(null);
+                      setDragOverFavoriteId(null);
+                    }}
                   >
                     <button
                       className="favorite-delete-btn"
