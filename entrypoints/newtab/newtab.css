@@ -316,28 +316,18 @@ select:focus {
 }
 
 .scenic-bg {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  height: 350px;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
   background-image: url('../../assets/bg.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-}
-
-.scenic-bg::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120px;
-  background: linear-gradient(to bottom, transparent, var(--bg));
 }
 
 :root[data-theme='dark'] .scenic-bg {
@@ -2122,5 +2112,151 @@ select:focus {
 .recent-modal-delete-btn:hover {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+
+/* ==========================================================================
+   Scenic Full Background Glassmorphism Styling
+   ========================================================================== */
+
+/* Remove background color of main container on home screen to let background show through */
+.app-shell.has-scenic-bg {
+  background: transparent;
+}
+
+.app-shell.has-scenic-bg .sidebar {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .sidebar {
+  background: rgba(15, 23, 42, 0.4);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .content {
+  background: transparent;
+}
+
+/* Translucent panels & cards */
+.app-shell.has-scenic-bg .search-card,
+.app-shell.has-scenic-bg .panel {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .search-card,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .panel {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Sub-card/element styling */
+.app-shell.has-scenic-bg .search-input-wrap {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .search-input-wrap {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .quick-engines button {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .quick-engines button {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .quick-engines button:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .quick-engines button:hover {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.app-shell.has-scenic-bg .favorite-card {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .favorite-card:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-card:hover {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.app-shell.has-scenic-bg .favorite-add {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-add {
+  background: rgba(15, 23, 42, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.app-shell.has-scenic-bg .favorite-add:hover {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: var(--primary);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-add:hover {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: var(--primary);
+}
+
+.app-shell.has-scenic-bg .recent-card {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .recent-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .recent-card:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: var(--primary);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .recent-card:hover {
+  background: rgba(30, 41, 59, 0.7);
+  border-color: var(--primary);
+}
+
+/* Sidebar item hovered state overrides */
+.app-shell.has-scenic-bg .nav-item:hover,
+.app-shell.has-scenic-bg .dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .nav-item:hover,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .dark-mode-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .nav-item.active {
+  background: var(--primary-soft);
+  backdrop-filter: blur(5px);
 }
 

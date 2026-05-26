@@ -779,7 +779,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${activeTab === 'home' ? ' has-scenic-bg' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <img src={logoImg} alt="Logo" className="brand-logo" />
