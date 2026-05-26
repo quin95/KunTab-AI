@@ -17,6 +17,7 @@ import {
   setFavorites,
   updateSettings,
   watchSettings,
+  setRecentOpensStorage,
 } from './lib/storage';
 import {
   type BookmarkNode,
@@ -320,6 +321,8 @@ export default function App() {
 
   const [showFavoritePicker, setShowFavoritePicker] = useState(false);
   const [favoriteSearch, setFavoriteSearch] = useState('');
+  const [showRecentOpensModal, setShowRecentOpensModal] = useState(false);
+  const [recentSearch, setRecentSearch] = useState('');
   const [dragFavoriteId, setDragFavoriteId] = useState<string | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [dragOverFavoriteId, setDragOverFavoriteId] = useState<string | null>(null);
@@ -494,6 +497,31 @@ export default function App() {
     return favorites.map((id) => map.get(id)).filter((bookmark): bookmark is FlatBookmark => Boolean(bookmark));
   }, [allBookmarks, favorites]);
 
+  const favoriteGridColumns = useMemo(() => {
+    const total = favoriteBookmarks.length + 1;
+    if (total <= 8) return total;
+
+    let bestCols = 8;
+    let bestScore = -1;
+
+    for (let cols = 8; cols >= 5; cols--) {
+      const rows = Math.ceil(total / cols);
+      const lastRowItems = total % cols || cols;
+
+      // Avoid leaving only 1 item on the last row
+      if (lastRowItems === 1 && rows > 1) {
+        continue;
+      }
+
+      // Prefer columns that fill the last row as much as possible
+      if (lastRowItems > bestScore) {
+        bestScore = lastRowItems;
+        bestCols = cols;
+      }
+    }
+    return bestCols;
+  }, [favoriteBookmarks.length]);
+
   const homeSearchMatches = useMemo(() => {
     const query = homeQuery.trim().toLowerCase();
     if (!query) return [];
@@ -516,6 +544,14 @@ export default function App() {
       })
       .slice(0, 20);
   }, [allBookmarks, favoriteSearch, favorites]);
+
+  const filteredRecentOpens = useMemo(() => {
+    const query = recentSearch.trim().toLowerCase();
+    if (!query) return recentOpens;
+    return recentOpens.filter(
+      (item) => item.title.toLowerCase().includes(query) || item.url.toLowerCase().includes(query)
+    );
+  }, [recentOpens, recentSearch]);
 
   const saveSettingsPatch = async (patch: Partial<AppSettings>) => {
     const next = await updateSettings(patch);
@@ -542,6 +578,19 @@ export default function App() {
     };
     await pushRecentOpen(record);
     setRecentOpens((prev) => [record, ...prev.filter((item) => item.id !== bookmark.id)].slice(0, 40));
+  };
+
+  const onRemoveRecentOpen = async (bookmarkId: string, openedAt: number) => {
+    const next = recentOpens.filter((item) => !(item.id === bookmarkId && item.openedAt === openedAt));
+    setRecentOpens(next);
+    await setRecentOpensStorage(next);
+  };
+
+  const onClearRecentOpens = async () => {
+    if (!window.confirm('确定要清空所有的最近打开记录吗？')) return;
+    setRecentOpens([]);
+    await setRecentOpensStorage([]);
+    showToast('已清空最近打开记录');
   };
 
   const onSearchSubmit = () => {
@@ -862,7 +911,10 @@ export default function App() {
                   {text.manageFavorites} <ChevronRight size={14} />
                 </button>
               </div>
-              <div className={`favorite-grid${activeDragId ? ' dragging-active' : ''}`}>
+              <div
+                className={`favorite-grid custom-columns${activeDragId ? ' dragging-active' : ''}`}
+                style={{ '--fav-cols': favoriteGridColumns } as React.CSSProperties}
+              >
                 {favoriteBookmarks.map((bookmark) => (
                   <div
                     className={`favorite-card${activeDragId === bookmark.id ? ' dragging' : ''}${dragOverFavoriteId === bookmark.id ? ' drag-over' : ''}`}
@@ -923,7 +975,7 @@ export default function App() {
                 <h3>
                   {text.recentOpen}
                 </h3>
-                <button className="text-link-btn" onClick={() => setActiveTab('bookmarks')}>
+                <button className="text-link-btn" onClick={() => setShowRecentOpensModal(true)}>
                   {text.viewMore} <ChevronRight size={14} />
                 </button>
               </div>
@@ -1489,6 +1541,80 @@ export default function App() {
                 onClick={() => {
                   setShowFavoritePicker(false);
                   setFavoriteSearch('');
+                }}
+              >
+                {text.close}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recently Opened modal */}
+      {showRecentOpensModal && (
+        <div className="modal-mask" onClick={() => setShowRecentOpensModal(false)}>
+          <div className="modal-card large recent-opens-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-header-title-row">
+                <h3>最近打开的历史记录</h3>
+                {recentOpens.length > 0 && (
+                  <button className="text-danger-link-btn" onClick={onClearRecentOpens}>
+                    <Trash2 size={14} />
+                    <span>清除全部</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="modal-body">
+              <div className="bookmark-search-wrap recent-search-wrap">
+                <Search size={18} />
+                <input
+                  value={recentSearch}
+                  onChange={(event) => setRecentSearch(event.target.value)}
+                  placeholder="搜索最近打开的网页..."
+                />
+              </div>
+              <div className="recent-modal-list">
+                {filteredRecentOpens.map((item) => (
+                  <div className="recent-modal-row" key={`${item.id}-${item.openedAt}`}>
+                    <a
+                      className="recent-modal-link"
+                      href={item.url}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openUrl(item.url);
+                      }}
+                    >
+                      <img src={faviconOf(item.url)} alt="" className="recent-modal-favicon" />
+                      <div className="recent-modal-info">
+                        <strong title={item.title}>{item.title}</strong>
+                        <small title={item.url}>{hostnameOf(item.url)}</small>
+                      </div>
+                    </a>
+                    <div className="recent-modal-actions">
+                      <span className="recent-modal-time">{formatRelativeTime(item.openedAt)}</span>
+                      <button
+                        className="recent-modal-delete-btn"
+                        onClick={() => onRemoveRecentOpen(item.id, item.openedAt)}
+                        title="从历史中删除"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {filteredRecentOpens.length === 0 && (
+                  <div className="empty" style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--muted)' }}>
+                    无匹配的历史记录
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                onClick={() => {
+                  setShowRecentOpensModal(false);
+                  setRecentSearch('');
                 }}
               >
                 {text.close}

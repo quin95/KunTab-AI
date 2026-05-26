@@ -649,6 +649,13 @@ select:focus {
   gap: 1rem;
 }
 
+@media (min-width: 1025px) {
+  .favorite-grid.custom-columns {
+    grid-template-columns: repeat(var(--fav-cols), minmax(0, 1fr));
+  }
+}
+
+
 .favorite-card {
   position: relative;
   background: var(--surface);
@@ -1965,3 +1972,155 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* Recently Opened History Modal */
+.modal-card.recent-opens-modal {
+  max-width: 600px;
+}
+
+.modal-header-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.text-danger-link-btn {
+  background: transparent;
+  border: 0;
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.text-danger-link-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.recent-search-wrap {
+  border-radius: 12px;
+  padding: 0.35rem 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--line);
+}
+
+.recent-modal-list {
+  max-height: 380px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+
+.recent-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s ease;
+}
+
+.recent-modal-row:last-child {
+  border-bottom: 0;
+}
+
+.recent-modal-row:hover {
+  background: var(--bg);
+}
+
+.recent-modal-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.recent-modal-favicon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  padding: 1px;
+}
+
+.recent-modal-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.recent-modal-info strong {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-modal-info small {
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 0.1rem;
+}
+
+.recent-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+.recent-modal-time {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.recent-modal-delete-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.recent-modal-row:hover .recent-modal-delete-btn {
+  opacity: 1;
+}
+
+.recent-modal-delete-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+

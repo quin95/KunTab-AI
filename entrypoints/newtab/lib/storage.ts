@@ -99,6 +99,11 @@ export async function pushRecentOpen(item: RecentOpenItem): Promise<void> {
   await setLocal(RECENT_OPENS_KEY, deduped.slice(0, 40));
 }
 
+export async function setRecentOpensStorage(items: RecentOpenItem[]): Promise<void> {
+  await setLocal(RECENT_OPENS_KEY, items);
+}
+
+
 export async function clearLocalCache(): Promise<void> {
   if (!hasStorageApi) {
     localStorage.removeItem(RECENT_OPENS_KEY);
