@@ -779,7 +779,7 @@ export default function App() {
   };
 
   return (
-    <div className={`app-shell${activeTab === 'home' ? ' has-scenic-bg' : ''}`}>
+    <div className="app-shell has-scenic-bg">
       <aside className="sidebar">
         <div className="brand">
           <img src={logoImg} alt="Logo" className="brand-logo" />
@@ -829,9 +829,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'home' && (
-          <div className="scenic-bg" />
-        )}
+        <div className="scenic-bg" />
 
         {activeTab === 'home' && (
           <section className="home-page">

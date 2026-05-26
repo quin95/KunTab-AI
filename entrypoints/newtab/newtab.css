@@ -2142,7 +2142,11 @@ select:focus {
 
 /* Translucent panels & cards */
 .app-shell.has-scenic-bg .search-card,
-.app-shell.has-scenic-bg .panel {
+.app-shell.has-scenic-bg .panel,
+.app-shell.has-scenic-bg .folder-tree,
+.app-shell.has-scenic-bg .bookmark-table-wrap,
+.app-shell.has-scenic-bg .backup-card,
+.app-shell.has-scenic-bg .settings-card {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -2151,7 +2155,11 @@ select:focus {
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .search-card,
-:root[data-theme='dark'] .app-shell.has-scenic-bg .panel {
+:root[data-theme='dark'] .app-shell.has-scenic-bg .panel,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-tree,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-table-wrap,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .backup-card,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .settings-card {
   background: rgba(30, 41, 59, 0.65);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
@@ -2260,3 +2268,73 @@ select:focus {
   backdrop-filter: blur(5px);
 }
 
+/* Other pages/tabs elements adjustments */
+.app-shell.has-scenic-bg .folder-row:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-row:hover {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.app-shell.has-scenic-bg .folder-summary-card {
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-summary-card {
+  background: rgba(15, 23, 42, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .backup-card-icon-container {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .backup-card-icon-container {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.app-shell.has-scenic-bg .pagination-btn {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .pagination-btn {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .pagination-btn:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .pagination-btn:hover {
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.app-shell.has-scenic-bg .pagination-size-select {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .pagination-size-select {
+  background: rgba(15, 23, 42, 0.4);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .bookmark-table th {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-table th {
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.app-shell.has-scenic-bg .bookmark-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-table tbody tr:hover {
+  background: rgba(15, 23, 42, 0.25);
+}
