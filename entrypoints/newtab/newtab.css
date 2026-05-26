@@ -2201,61 +2201,86 @@ select:focus {
 }
 
 .app-shell.has-scenic-bg .favorite-card {
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  transform: translateY(0);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-card {
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(20, 24, 33, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .app-shell.has-scenic-bg .favorite-card:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: #ffffff;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  border-color: var(--primary);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-card:hover {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(30, 41, 59, 0.95);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+  border-color: var(--primary);
 }
 
 .app-shell.has-scenic-bg .favorite-add {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px dashed rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1.5px dashed rgba(15, 23, 42, 0.15);
+  transform: translateY(0);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-add {
   background: rgba(15, 23, 42, 0.2);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1.5px dashed rgba(255, 255, 255, 0.1);
 }
 
 .app-shell.has-scenic-bg .favorite-add:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: #ffffff;
+  border-style: solid;
   border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .favorite-add:hover {
-  background: rgba(15, 23, 42, 0.4);
+  background: rgba(30, 41, 59, 0.9);
+  border-style: solid;
   border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .app-shell.has-scenic-bg .recent-card {
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+  transform: translateY(0);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .recent-card {
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(20, 24, 33, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .app-shell.has-scenic-bg .recent-card:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: #ffffff;
   border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .recent-card:hover {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(30, 41, 59, 0.9);
   border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 /* Sidebar item hovered state overrides */
