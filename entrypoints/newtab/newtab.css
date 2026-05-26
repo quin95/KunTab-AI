@@ -1424,9 +1424,9 @@ select:focus {
 }
 
 .pagination-btn.active {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: transparent;
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
   font-weight: 600;
 }
 
@@ -2398,4 +2398,58 @@ select:focus {
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-table tbody tr:hover {
   background: rgba(15, 23, 42, 0.25);
+}
+
+/* ==========================================================================
+   Bookmarks Viewport-Fixed Layout (Desktop Only)
+   ========================================================================== */
+@media (min-width: 1025px) {
+  /* 1. When bookmarks tab is active, fix main content container size and hide overflow scrollbar */
+  .content.content-bookmarks-fixed {
+    overflow: hidden;
+  }
+
+  /* 2. Bookmarks page occupies full main content container height and disables self scroll */
+  .content-bookmarks-fixed .bookmark-page {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /* 3. Bookmarks layout fills remaining height, using stretch to align left and right containers */
+  .content-bookmarks-fixed .bookmark-layout {
+    height: 100%;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* 4. Left folder tree height set to 100%, position static (scrollable internally via folder-list-scroll) */
+  .content-bookmarks-fixed .folder-tree {
+    height: 100%;
+    position: static;
+  }
+
+  /* 5. Right main content uses vertical flex layout and fills parent container height */
+  .content-bookmarks-fixed .bookmark-main-content {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    gap: 1rem;
+  }
+
+  /* 6. Right top filter/tabs bar does not shrink */
+  .content-bookmarks-fixed .bookmark-top-bar {
+    flex-shrink: 0;
+  }
+
+  /* 7. Center bookmark card grid handles scrolling */
+  .content-bookmarks-fixed .bookmark-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 6px; /* Avoid grid card border overlapping with scrollbar */
+  }
+
+  /* 8. Pagination controls footer at the bottom does not shrink */
+  .content-bookmarks-fixed .pagination-footer {
+    flex-shrink: 0;
+  }
 }

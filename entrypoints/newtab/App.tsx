@@ -907,7 +907,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="content">
+      <main className={`content ${activeTab === 'bookmarks' ? 'content-bookmarks-fixed' : ''}`}>
 
 
 
