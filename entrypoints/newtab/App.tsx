@@ -753,41 +753,22 @@ export default function App() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="dark-mode-toggle">
+          <button 
+            className="dark-mode-toggle"
+            onClick={() => saveSettingsPatch({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
+          >
             <div className="dark-mode-toggle-left">
               <Moon size={18} />
               <span>深色模式</span>
             </div>
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={settings.theme === 'dark'}
-                onChange={(event) => saveSettingsPatch({ theme: event.target.checked ? 'dark' : 'light' })}
-              />
-              <span className="slider"></span>
-            </label>
-          </div>
+          </button>
         </div>
       </aside>
 
       <main className="content">
 
 
-        <header className="page-header">
-          <div>
-            <h1>{navTitle(activeTab)}</h1>
-            <p>{activeTab === 'home' ? text.pageHomeDesc : activeTab === 'bookmarks' ? text.pageBookmarksDesc : activeTab === 'backup' ? text.pageBackupDesc : text.pageSettingsDesc}</p>
-          </div>
-          <div className="page-header-actions">
-            <button type="button" className="icon-circle-btn" aria-label="notifications" style={{ position: 'relative' }}>
-              <Bell size={18} />
-              <span style={{ position: 'absolute', top: '10px', right: '10px', width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }}></span>
-            </button>
-            <button type="button" className="icon-circle-btn" aria-label="quick settings" onClick={() => setActiveTab('settings')}>
-              <Cog size={18} />
-            </button>
-          </div>
-        </header>
+
 
         {message && (
           <div className="toast-inline" role="status">
@@ -799,10 +780,38 @@ export default function App() {
         )}
 
         {activeTab === 'home' && (
+          <div className="scenic-bg">
+            <svg viewBox="0 0 1200 350" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#eef4fc" />
+                  <stop offset="80%" stopColor="#f5f7fb" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="mntGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#d1e0ff" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#f5f7fb" stopOpacity="0" />
+                </linearGradient>
+                <linearGradient id="mntGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#e4ecff" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#f5f7fb" stopOpacity="0.2" />
+                </linearGradient>
+              </defs>
+              <rect width="1200" height="350" fill="url(#skyGrad)" />
+              <circle cx="85%" cy="90" r="45" fill="#fff9d6" opacity="0.6" />
+              <path d="M0 240 L180 130 L400 220 L650 110 L900 230 L1080 140 L1200 200 L1200 350 L0 350 Z" fill="url(#mntGrad1)" />
+              <path d="M0 270 L280 170 L550 250 L800 150 L1050 240 L1200 180 L1200 350 L0 350 Z" fill="url(#mntGrad2)" />
+            </svg>
+          </div>
+        )}
+
+        {activeTab === 'home' && (
           <section className="home-page">
             <div className="hero">
-              <h2>{greetingByTime(settings.language)} 👋</h2>
-              <p>{text.searchHint}</p>
+              <div className="hero-left">
+                <h2>{greetingByTime(settings.language)} 👋</h2>
+                <p>{text.pageHomeDesc || text.searchHint}</p>
+              </div>
+
             </div>
 
             <div className="search-card">
@@ -865,7 +874,6 @@ export default function App() {
             <section className="panel">
               <div className="panel-head">
                 <h3>
-                  <Star size={18} />
                   {text.favorites}
                 </h3>
                 <button className="text-link-btn" onClick={() => setShowFavoritePicker(true)}>
@@ -913,7 +921,6 @@ export default function App() {
             <section className="panel">
               <div className="panel-head">
                 <h3>
-                  <Clock size={18} />
                   {text.recentOpen}
                 </h3>
                 <button className="text-link-btn" onClick={() => setActiveTab('bookmarks')}>
