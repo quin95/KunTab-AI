@@ -1,0 +1,142 @@
+import type { AppSettings, FavoritesState, RecentOpenItem } from '../models';
+
+const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
+
+const SETTINGS_KEY = 'bookmark-ai::settings';
+const FAVORITES_KEY = 'bookmark-ai::favorites';
+const RECENT_OPENS_KEY = 'bookmark-ai::recent-opens';
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  theme: 'light',
+  searchEngine: 'google',
+  startPage: 'home',
+  compactMode: false,
+  fontSize: 'medium',
+  language: 'zh-CN',
+};
+
+const DEFAULT_FAVORITES: FavoritesState = {
+  favorites: [],
+};
+
+const hasStorageApi =
+  !!ext?.storage &&
+  !!ext.storage.sync &&
+  !!ext.storage.local;
+
+async function getSync<T>(key: string, fallback: T): Promise<T> {
+  if (!hasStorageApi) {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    try {
+      return { ...fallback, ...JSON.parse(raw) } as T;
+    } catch {
+      return fallback;
+    }
+  }
+  const data = await ext.storage.sync.get(key);
+  return ((data[key] ?? fallback) as T) ?? fallback;
+}
+
+async function setSync<T>(key: string, value: T): Promise<void> {
+  if (!hasStorageApi) {
+    localStorage.setItem(key, JSON.stringify(value));
+    return;
+  }
+  await ext.storage.sync.set({ [key]: value });
+}
+
+async function getLocal<T>(key: string, fallback: T): Promise<T> {
+  if (!hasStorageApi) {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return fallback;
+    }
+  }
+  const data = await ext.storage.local.get(key);
+  return ((data[key] ?? fallback) as T) ?? fallback;
+}
+
+async function setLocal<T>(key: string, value: T): Promise<void> {
+  if (!hasStorageApi) {
+    localStorage.setItem(key, JSON.stringify(value));
+    return;
+  }
+  await ext.storage.local.set({ [key]: value });
+}
+
+export async function getSettings(): Promise<AppSettings> {
+  const settings = await getSync<AppSettings>(SETTINGS_KEY, DEFAULT_SETTINGS);
+  return { ...DEFAULT_SETTINGS, ...settings };
+}
+
+export async function updateSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  const merged = { ...(await getSettings()), ...patch };
+  await setSync(SETTINGS_KEY, merged);
+  return merged;
+}
+
+export async function getFavorites(): Promise<FavoritesState> {
+  const value = await getSync<FavoritesState>(FAVORITES_KEY, DEFAULT_FAVORITES);
+  return { ...DEFAULT_FAVORITES, ...value };
+}
+
+export async function setFavorites(next: FavoritesState): Promise<void> {
+  await setSync(FAVORITES_KEY, next);
+}
+
+export async function getRecentOpens(): Promise<RecentOpenItem[]> {
+  return await getLocal<RecentOpenItem[]>(RECENT_OPENS_KEY, []);
+}
+
+export async function pushRecentOpen(item: RecentOpenItem): Promise<void> {
+  const current = await getRecentOpens();
+  const deduped = current.filter((entry) => entry.id !== item.id && entry.url !== item.url);
+  deduped.unshift(item);
+  await setLocal(RECENT_OPENS_KEY, deduped.slice(0, 40));
+}
+
+export async function clearLocalCache(): Promise<void> {
+  if (!hasStorageApi) {
+    localStorage.removeItem(RECENT_OPENS_KEY);
+    return;
+  }
+  await ext.storage.local.remove([RECENT_OPENS_KEY]);
+}
+
+export async function clearAppCache(): Promise<void> {
+  if (!hasStorageApi) {
+    localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem(FAVORITES_KEY);
+    localStorage.removeItem(RECENT_OPENS_KEY);
+    return;
+  }
+  await ext.storage.sync.set({
+    [SETTINGS_KEY]: DEFAULT_SETTINGS,
+    [FAVORITES_KEY]: DEFAULT_FAVORITES,
+  });
+  await ext.storage.local.remove([RECENT_OPENS_KEY]);
+}
+
+export async function replaceFromBackup(settings: AppSettings, favorites: FavoritesState): Promise<void> {
+  await setSync(SETTINGS_KEY, settings);
+  await setSync(FAVORITES_KEY, favorites);
+}
+
+export function watchSettings(handler: (settings: AppSettings) => void): () => void {
+  if (!hasStorageApi) return () => {};
+  const listener = (
+    changes: Record<string, { oldValue?: unknown; newValue?: unknown }>,
+    areaName: string,
+  ) => {
+    if (areaName !== 'sync') return;
+    if (changes[SETTINGS_KEY]?.newValue) {
+      handler({ ...DEFAULT_SETTINGS, ...(changes[SETTINGS_KEY].newValue as AppSettings) });
+    }
+  };
+  ext.storage.onChanged.addListener(listener);
+  return () => ext.storage.onChanged.removeListener(listener);
+}

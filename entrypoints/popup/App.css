@@ -1,0 +1,26 @@
+.popup-root {
+  width: 300px;
+  padding: 14px;
+  font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+}
+
+.popup-root h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.popup-root p {
+  margin: 10px 0;
+  color: #4a5b7c;
+  line-height: 1.4;
+}
+
+.popup-root button {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  background: #2563ff;
+  color: #fff;
+  padding: 9px 10px;
+  cursor: pointer;
+}
