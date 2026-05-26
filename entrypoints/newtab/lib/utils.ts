@@ -1,5 +1,17 @@
 export function faviconOf(url: string, size = 64): string {
   try {
+    const isFirefox = typeof import.meta !== 'undefined' && (import.meta as any).env?.BROWSER === 'firefox';
+    const chromeObj = (globalThis as any).chrome;
+    if (!isFirefox && chromeObj && chromeObj.runtime?.id) {
+      try {
+        const faviconUrl = new URL(`chrome-extension://${chromeObj.runtime.id}/_favicon/`);
+        faviconUrl.searchParams.append('pageUrl', url);
+        faviconUrl.searchParams.append('size', size.toString());
+        return faviconUrl.toString();
+      } catch (e) {
+        // Fallback below
+      }
+    }
     const hostname = new URL(url).hostname;
     return `https://www.google.com/s2/favicons?domain=${hostname}&sz=${size}`;
   } catch {

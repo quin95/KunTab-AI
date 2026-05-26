@@ -73,6 +73,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import './newtab.css';
+import logoImg from '../../assets/logo.png';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
 const SEARCH_ENGINE_HOSTS: Record<string, string> = {
@@ -331,7 +332,7 @@ export default function App() {
   // Bookmarks Table Row Menu State
   const [activeActionRowId, setActiveActionRowId] = useState<string | null>(null);
 
-  const text = LOCALE_TEXT[settings.language];
+  const text = LOCALE_TEXT[settings.language] as Record<string, string>;
   const fmt = (tpl: string, vars: Record<string, string | number>) =>
     tpl.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? ''));
 
@@ -730,9 +731,7 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-badge">
-            <Bookmark size={20} fill="#ffffff" />
-          </div>
+          <img src={logoImg} alt="Logo" className="brand-logo" />
           <div className="brand-text">KunTab</div>
         </div>
 
@@ -780,28 +779,7 @@ export default function App() {
         )}
 
         {activeTab === 'home' && (
-          <div className="scenic-bg">
-            <svg viewBox="0 0 1200 350" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#eef4fc" />
-                  <stop offset="80%" stopColor="#f5f7fb" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="mntGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#d1e0ff" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="#f5f7fb" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="mntGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#e4ecff" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#f5f7fb" stopOpacity="0.2" />
-                </linearGradient>
-              </defs>
-              <rect width="1200" height="350" fill="url(#skyGrad)" />
-              <circle cx="85%" cy="90" r="45" fill="#fff9d6" opacity="0.6" />
-              <path d="M0 240 L180 130 L400 220 L650 110 L900 230 L1080 140 L1200 200 L1200 350 L0 350 Z" fill="url(#mntGrad1)" />
-              <path d="M0 270 L280 170 L550 250 L800 150 L1050 240 L1200 180 L1200 350 L0 350 Z" fill="url(#mntGrad2)" />
-            </svg>
-          </div>
+          <div className="scenic-bg" />
         )}
 
         {activeTab === 'home' && (
@@ -1458,13 +1436,13 @@ export default function App() {
       {/* Favorites picker modal */}
       {showFavoritePicker && (
         <div className="modal-mask" onClick={() => setShowFavoritePicker(false)}>
-          <div className="modal-card large" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-card large favorite-picker-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>{text.addFavoriteSite}</h3>
             </div>
             <div className="modal-body">
-              <div className="bookmark-search-wrap" style={{ margin: '0 0 0.5rem' }}>
-                <Search size={16} />
+              <div className="bookmark-search-wrap favorite-search-wrap">
+                <Search size={18} />
                 <input
                   value={favoriteSearch}
                   onChange={(event) => setFavoriteSearch(event.target.value)}
@@ -1482,7 +1460,7 @@ export default function App() {
                     }}
                   >
                     <img src={faviconOf(bookmark.url)} alt="" />
-                    <span>{bookmark.title}</span>
+                    <span className="picker-title">{bookmark.title}</span>
                     <small>{bookmark.folderName}</small>
                   </button>
                 ))}
