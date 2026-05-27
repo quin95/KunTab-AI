@@ -83,6 +83,7 @@ import {
   Send,
   Square,
   ArrowUp,
+  SendHorizontal,
 } from 'lucide-react';
 import { testAi, chat } from './lib/ai';
 import { buildCompareTrees, executeCategorization, serializeBookmarkContext, type DiffTreeNode } from './lib/aiBookmark';
@@ -2035,7 +2036,7 @@ ${serializedContext}
                 disabled={settings.aiProvider === 'none' || (!chatGenerating && !chatInputValue.trim())}
                 title={chatGenerating ? '停止生成' : '发送消息'}
               >
-                {chatGenerating ? <Square size={18} /> : <ArrowUp size={20} />}
+                {chatGenerating ? <Square size={16} /> : <SendHorizontal size={18} />}
               </button>
             </div>
           </section>
