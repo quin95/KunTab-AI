@@ -1221,6 +1221,7 @@ select:focus {
   gap: 1.25rem;
   flex: 1;
   align-content: start;
+  padding: 6px 0;
 }
 
 .bookmark-card,
@@ -2548,7 +2549,7 @@ select:focus {
   .content-bookmarks-fixed .bookmark-grid {
     flex: 1;
     overflow-y: auto;
-    padding-right: 6px; /* Avoid grid card border overlapping with scrollbar */
+    padding: 6px 6px 6px 0; /* Add top/bottom padding to prevent transform clipping, and right padding to avoid scrollbar overlap */
   }
 
   /* 8. Pagination controls footer at the bottom does not shrink */
