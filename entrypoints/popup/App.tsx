@@ -26,6 +26,7 @@ const POPUP_LOCALE = {
     noParentFolder: '无法创建文件夹',
     folderCreated: '已创建文件夹「{title}」',
     isBookmarked: '已在此处收藏',
+    shortcutHint: '快捷键: {key}',
   },
   'en-US': {
     quickBookmark: 'Quick Bookmark',
@@ -45,6 +46,7 @@ const POPUP_LOCALE = {
     noParentFolder: 'Cannot create folder',
     folderCreated: 'Folder "{title}" created',
     isBookmarked: 'Bookmarked here',
+    shortcutHint: 'Shortcut: {key}',
   }
 };
 
@@ -66,6 +68,7 @@ function App() {
 
   const lang = settings?.language || 'zh-CN';
   const t = POPUP_LOCALE[lang];
+  const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform || navigator.userAgent);
 
   // Theme support
   useEffect(() => {
@@ -384,6 +387,12 @@ function App() {
         <div className="toast-notification">
           <Info size={14} />
           <span>{toastMsg}</span>
+        </div>
+      )}
+
+      {!isSuccessState && (
+        <div className="shortcut-hint">
+          {t.shortcutHint.replace('{key}', isMac ? '⌥ Option + ⇧ Shift + S' : 'Alt + Shift + S')}
         </div>
       )}
     </main>

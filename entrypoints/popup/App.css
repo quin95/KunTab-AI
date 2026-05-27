@@ -427,3 +427,14 @@
     opacity: 1;
   }
 }
+
+.shortcut-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  opacity: 0.8;
+  letter-spacing: 0.02em;
+}
