@@ -38,7 +38,14 @@ export function serializeBookmarkContext(
       let cleanUrl = b.url;
       try {
         const parsed = new URL(b.url);
-        cleanUrl = `${parsed.protocol}//${parsed.host}${parsed.pathname !== '/' ? parsed.pathname : ''}`;
+        // Remove common tracking parameters to help group duplicates that only differ by tracking parameters
+        const trackingParams = [
+          'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+          'spm', 'from', 'ref', 'click_id', 'gclid', 'fbclid', '_hsenc', '_hsmi',
+          'mc_cid', 'mc_eid', 'rb_clickid', 's_kwcid', 'msclkid'
+        ];
+        trackingParams.forEach(param => parsed.searchParams.delete(param));
+        cleanUrl = parsed.toString();
       } catch {
         // use original if URL parsing fails
       }

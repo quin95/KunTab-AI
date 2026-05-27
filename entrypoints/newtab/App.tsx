@@ -1040,6 +1040,30 @@ export default function App() {
   };
 
   const onSendChatMessage = async (customText?: string) => {
+    const enrichDuplicates = (data: any) => {
+      if (data && data.duplicates) {
+        return {
+          ...data,
+          duplicates: data.duplicates.map((group: any) => ({
+            ...group,
+            items: (group.items || []).map((item: any) => {
+              const local = allBookmarks.find((b) => String(b.id) === String(item.id));
+              if (local) {
+                return {
+                  ...item,
+                  title: local.title || item.title,
+                  folderPath: local.folderPath || item.folderPath,
+                  dateAdded: local.dateAdded || item.dateAdded,
+                };
+              }
+              return item;
+            }),
+          })),
+        };
+      }
+      return data;
+    };
+
     const textToSend = (customText || chatInputValue).trim();
     if (!textToSend) return;
 
@@ -1175,6 +1199,9 @@ ${serializedContext}
                 const jsonStr = match[2].trim();
                 try {
                   cardData = JSON.parse(jsonStr);
+                  if (type === 'duplicates') {
+                    cardData = enrichDuplicates(cardData);
+                  }
                   cardType = type as ChatMessage['cardType'];
                   // If complete, strip the notice and the code block
                   const cleanBase = text.replace(match[0], '').trim();
@@ -1214,6 +1241,9 @@ ${serializedContext}
         
         try {
           cardData = JSON.parse(jsonStr);
+          if (type === 'duplicates') {
+            cardData = enrichDuplicates(cardData);
+          }
           cardType = type as ChatMessage['cardType'];
           cleanText = responseText.replace(match[0], '').trim();
         } catch (e) {
@@ -1912,16 +1942,18 @@ ${serializedContext}
                       {msg.content ? (
                         <MarkdownText text={msg.content} />
                       ) : (
-                        <div className="chat-loading-container-inner" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div className="chat-loading-dots">
-                            <div></div>
-                            <div></div>
-                            <div></div>
+                        chatGenerating && !msg.cardType && chatMessages[chatMessages.length - 1]?.id === msg.id && (
+                          <div className="chat-loading-container-inner" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div className="chat-loading-dots">
+                              <div></div>
+                              <div></div>
+                              <div></div>
+                            </div>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>
+                              AI 正在思考并整理书签，请稍候...
+                            </span>
                           </div>
-                          <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>
-                            AI 正在思考并整理书签，请稍候...
-                          </span>
-                        </div>
+                        )
                       )}
                       
                       {msg.cardType === 'moves' && (
@@ -3113,11 +3145,11 @@ function DuplicateCleanCard({
                         <span>{item.folderPath}</span>
                       </div>
                     </div>
-                    {item.dateAdded && (
+                    {item.dateAdded ? (
                       <div className="duplicate-item-time">
                         {formatDateTime(item.dateAdded)}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 );
               })}
