@@ -432,6 +432,11 @@ export default function App() {
     setActiveActionRowId(null);
   }, [selectedFolderId, bookmarkQuery, subTab]);
 
+  // Clear search query when changing folders
+  useEffect(() => {
+    setBookmarkQuery('');
+  }, [selectedFolderId]);
+
   useEffect(() => {
     reloadBookmarks();
     reloadStorage();
