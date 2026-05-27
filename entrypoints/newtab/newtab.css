@@ -195,6 +195,40 @@ select:focus {
   letter-spacing: -0.02em;
 }
 
+.brand-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.brand-version {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-radius: 9999px;
+  line-height: 1;
+  user-select: none;
+  letter-spacing: normal;
+}
+
+.cache-size-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: 6px;
+  margin-left: 0.5rem;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+  user-select: none;
+}
+
+
+
 .nav-list {
   display: flex;
   flex-direction: column;
@@ -1809,6 +1843,12 @@ select:focus {
   min-width: 150px;
 }
 
+.settings-row input[type="text"] {
+  min-width: 250px;
+  max-width: 360px;
+  width: 100%;
+}
+
 /* Startup radio option buttons */
 .startup-radio-group {
   display: flex;
@@ -1967,6 +2007,7 @@ select:focus {
 }
 
 .favorite-search-wrap {
+  width: 100%;
   border-radius: 12px;
   padding: 0.35rem 1rem;
   margin-bottom: 0.5rem;
@@ -2136,6 +2177,7 @@ select:focus {
 }
 
 .recent-search-wrap {
+  width: 100%;
   border-radius: 12px;
   padding: 0.35rem 1rem;
   margin-bottom: 0.75rem;

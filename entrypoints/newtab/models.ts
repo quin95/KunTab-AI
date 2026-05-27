@@ -12,6 +12,7 @@ export interface AppSettings {
   compactMode: boolean;
   fontSize: FontSize;
   language: 'zh-CN' | 'en-US';
+  customBgUrl?: string;
 }
 
 export interface FavoritesState {

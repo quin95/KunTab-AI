@@ -2,9 +2,9 @@ import type { AppSettings, FavoritesState, RecentOpenItem } from '../models';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
 
-const SETTINGS_KEY = 'bookmark-ai::settings';
-const FAVORITES_KEY = 'bookmark-ai::favorites';
-const RECENT_OPENS_KEY = 'bookmark-ai::recent-opens';
+const SETTINGS_KEY = 'kuntab::settings';
+const FAVORITES_KEY = 'kuntab::favorites';
+const RECENT_OPENS_KEY = 'kuntab::recent-opens';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   compactMode: false,
   fontSize: 'medium',
   language: 'zh-CN',
+  customBgUrl: '',
 };
 
 const DEFAULT_FAVORITES: FavoritesState = {
@@ -145,3 +146,36 @@ export function watchSettings(handler: (settings: AppSettings) => void): () => v
   ext.storage.onChanged.addListener(listener);
   return () => ext.storage.onChanged.removeListener(listener);
 }
+
+export async function getStorageSize(): Promise<string> {
+  let totalBytes = 0;
+  if (!hasStorageApi) {
+    const keys = [SETTINGS_KEY, FAVORITES_KEY, RECENT_OPENS_KEY];
+    for (const key of keys) {
+      const val = localStorage.getItem(key);
+      if (val) {
+        totalBytes += new TextEncoder().encode(val).length;
+      }
+    }
+  } else {
+    try {
+      const [localData, syncData] = await Promise.all([
+        ext.storage.local.get([RECENT_OPENS_KEY]),
+        ext.storage.sync.get([SETTINGS_KEY, FAVORITES_KEY]),
+      ]);
+      const localStr = JSON.stringify(localData);
+      const syncStr = JSON.stringify(syncData);
+      totalBytes += new TextEncoder().encode(localStr).length;
+      totalBytes += new TextEncoder().encode(syncStr).length;
+    } catch {
+      // Fallback
+    }
+  }
+
+  if (totalBytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(totalBytes) / Math.log(k));
+  return parseFloat((totalBytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+

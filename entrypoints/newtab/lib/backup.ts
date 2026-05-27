@@ -20,7 +20,7 @@ export async function buildBackup(settings: AppSettings, favorites: FavoritesSta
   const topLevel = tree[0]?.children ?? tree;
 
   return {
-    app: 'bookmark-ai' as any,
+    app: 'kuntab' as any,
     version: 1,
     exportedAt: Date.now(),
     tree: topLevel.map(toBackupNode),
@@ -37,7 +37,7 @@ function ymdhms() {
 
 export function downloadJsonBackup(backup: BackupData) {
   downloadTextFile(
-    `bookmark-ai-backup-${ymdhms()}.json`,
+    `kuntab-backup-${ymdhms()}.json`,
     JSON.stringify(backup, null, 2),
     'application/json;charset=utf-8',
   );
@@ -86,7 +86,7 @@ function backupToNetscapeHtml(nodes: BookmarkBackupNode[]): string {
 
 export function downloadHtmlBackup(backup: BackupData) {
   downloadTextFile(
-    `bookmark-ai-backup-${ymdhms()}.html`,
+    `kuntab-backup-${ymdhms()}.html`,
     backupToNetscapeHtml(backup.tree),
     'text/html;charset=utf-8',
   );

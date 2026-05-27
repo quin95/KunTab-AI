@@ -18,6 +18,7 @@ import {
   updateSettings,
   watchSettings,
   setRecentOpensStorage,
+  getStorageSize,
 } from './lib/storage';
 import {
   type BookmarkNode,
@@ -72,11 +73,20 @@ import {
   ChevronDown,
   Check,
   ExternalLink,
+  Image,
 } from 'lucide-react';
 import './newtab.css';
 import logoImg from '../../assets/logo.png';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
+const extensionVersion = (() => {
+  try {
+    return ext?.runtime?.getManifest?.()?.version || '1.0.0';
+  } catch {
+    return '1.0.0';
+  }
+})();
+
 const SEARCH_ENGINE_HOSTS: Record<string, string> = {
   google: 'google.com',
   baidu: 'baidu.com',
@@ -144,6 +154,8 @@ const LOCALE_TEXT = {
     startupPage: '启动时打开',
     appearanceSettings: '外观设置',
     themeMode: '主题模式',
+    customBgUrl: '自定义背景图',
+    customBgUrlDesc: '输入背景图片的 URL 地址，清除输入框可恢复默认背景',
     followSystem: '跟随系统',
     compactMode: '紧凑布局',
     fontSize: '字体大小',
@@ -151,7 +163,7 @@ const LOCALE_TEXT = {
     clearLocalCache: '清除本地数据',
     clearData: '清除数据',
     about: '关于 KunTab',
-    currentVersion: '当前版本 1.0.0',
+    currentVersion: `当前版本 ${extensionVersion}`,
     editBookmark: '编辑书签',
     folder: '所属文件夹',
     cancel: '取消',
@@ -242,6 +254,8 @@ const LOCALE_TEXT = {
     startupPage: 'Startup Page',
     appearanceSettings: 'Appearance',
     themeMode: 'Theme Mode',
+    customBgUrl: 'Custom Background Image',
+    customBgUrlDesc: 'Enter a background image URL. Clear to restore default',
     followSystem: 'System',
     compactMode: 'Compact Layout',
     fontSize: 'Font Size',
@@ -249,7 +263,7 @@ const LOCALE_TEXT = {
     clearLocalCache: 'Clear Local Cache',
     clearData: 'Clear Data',
     about: 'About KunTab',
-    currentVersion: 'Version 1.0.0',
+    currentVersion: `Version ${extensionVersion}`,
     editBookmark: 'Edit Bookmark',
     folder: 'Folder',
     cancel: 'Cancel',
@@ -313,6 +327,8 @@ export default function App() {
   const [homeQuery, setHomeQuery] = useState('');
   const [bookmarkQuery, setBookmarkQuery] = useState('');
   const [message, setMessage] = useState('');
+  const [cacheSize, setCacheSize] = useState('0 B');
+  const [bgUrlInput, setBgUrlInput] = useState(settings.customBgUrl || '');
 
   const [editTarget, setEditTarget] = useState<FlatBookmark | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -384,14 +400,16 @@ export default function App() {
   };
 
   const reloadStorage = async () => {
-    const [savedSettings, savedFavorites, recent] = await Promise.all([
+    const [savedSettings, savedFavorites, recent, size] = await Promise.all([
       getSettings(),
       getFavorites(),
       getRecentOpens(),
+      getStorageSize(),
     ]);
     setSettingsState(savedSettings);
     setFavoritesState(savedFavorites.favorites);
     setRecentOpens(recent);
+    setCacheSize(size);
 
     if (savedSettings.startPage === 'bookmarks') {
       setActiveTab('bookmarks');
@@ -430,6 +448,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (activeTab === 'settings') {
+      getStorageSize().then(setCacheSize);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     const root = document.documentElement;
     const resolvedTheme =
       settings.theme === 'system'
@@ -441,6 +465,10 @@ export default function App() {
     root.dataset.theme = resolvedTheme;
     root.dataset.fontSize = settings.fontSize;
   }, [settings.theme, settings.fontSize]);
+
+  useEffect(() => {
+    setBgUrlInput(settings.customBgUrl || '');
+  }, [settings.customBgUrl]);
 
   const currentBookmarkNode = useMemo(() => {
     if (selectedFolderId === '0') return null;
@@ -938,7 +966,10 @@ export default function App() {
       <aside className="sidebar">
         <div className="brand">
           <img src={logoImg} alt="Logo" className="brand-logo" />
-          <div className="brand-text">KunTab</div>
+          <div className="brand-title-wrap">
+            <div className="brand-text">KunTab</div>
+            <span className="brand-version">v{extensionVersion}</span>
+          </div>
         </div>
 
         <nav className="nav-list">
@@ -984,7 +1015,10 @@ export default function App() {
           </div>
         )}
 
-        <div className="scenic-bg" />
+        <div
+          className="scenic-bg"
+          style={settings.customBgUrl ? { backgroundImage: `url(${settings.customBgUrl})` } : undefined}
+        />
 
         {activeTab === 'home' && (
           <section className="home-page">
@@ -1029,7 +1063,7 @@ export default function App() {
 
               <div className="quick-engines">
                 {SEARCH_ENGINES.map((engine) => (
-                  <button key={engine.id} onClick={() => openUrl(engine.buildUrl(parseSearchCommand(homeQuery).query || homeQuery || 'bookmark ai'))}>
+                  <button key={engine.id} onClick={() => openUrl(engine.buildUrl(parseSearchCommand(homeQuery).query || homeQuery || 'KunTab'))}>
                     <img src={engineIconUrl(engine.id)} alt="" />
                     {engine.label}
                   </button>
@@ -1584,6 +1618,29 @@ export default function App() {
 
               <div className="settings-row">
                 <div className="setting-left">
+                  <div className="setting-icon-wrap"><Image size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.customBgUrl}</span>
+                    <span className="setting-desc">{text.customBgUrlDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://example.com/background.jpg"
+                  value={bgUrlInput}
+                  onChange={(event) => setBgUrlInput(event.target.value)}
+                  onBlur={() => saveSettingsPatch({ customBgUrl: bgUrlInput.trim() })}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      saveSettingsPatch({ customBgUrl: bgUrlInput.trim() });
+                      (event.target as HTMLInputElement).blur();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
                   <div className="setting-icon-wrap"><Grid3X3 size={18} /></div>
                   <div className="setting-meta">
                     <span className="setting-title">{text.compactMode}</span>
@@ -1625,7 +1682,10 @@ export default function App() {
                 <div className="setting-left">
                   <div className="setting-icon-wrap"><Trash2 size={18} /></div>
                   <div className="setting-meta">
-                    <span className="setting-title">{text.clearLocalCache}</span>
+                    <span className="setting-title">
+                      {text.clearLocalCache}
+                      <span className="cache-size-badge">{cacheSize}</span>
+                    </span>
                     <span className="setting-desc">清除应用的本地缓存和设置（不会删除书签数据）</span>
                   </div>
                 </div>
