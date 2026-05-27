@@ -83,7 +83,10 @@ function App() {
       // 1. Get active tab
       if (ext?.tabs) {
         try {
-          const tabs = await ext.tabs.query({ active: true, currentWindow: true });
+          let tabs = await ext.tabs.query({ active: true, currentWindow: true });
+          if (!tabs || tabs.length === 0) {
+            tabs = await ext.tabs.query({ active: true, lastFocusedWindow: true });
+          }
           if (tabs && tabs[0]) {
             const tab = tabs[0];
             setTitle(tab.title || '');
