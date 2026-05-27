@@ -1094,12 +1094,6 @@ export default function App() {
           <section className="bookmark-page">
             <div className="bookmark-layout">
               <aside className="folder-tree">
-                <div className="folder-head">
-                  <div className="folder-head-left">
-                    <Folder size={16} />
-                    <span>{text.folders}</span>
-                  </div>
-                </div>
                 <div className="folder-list-scroll">
                   <div className={selectedFolderId === '0' ? 'folder-row active' : 'folder-row'}>
                     <button className="folder-select" onClick={() => setSelectedFolderId('0')}>
@@ -1188,7 +1182,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div
-                        className="bookmark-card"
+                        className={`bookmark-card ${activeActionRowId === item.id ? 'menu-open' : ''}`}
                         key={item.id}
                         onClick={() => onOpenBookmark(item, true)}
                       >
@@ -1791,7 +1785,7 @@ function FolderTree({
     return root ? root.children : nodes;
   }, [nodes]);
 
-  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({ '1': true });
 
   const toggleExpand = (id: string, event: React.MouseEvent) => {
     event.stopPropagation();
