@@ -20,5 +20,13 @@ export default defineConfig({
     action: {
       default_title: 'KunTab',
     },
+    commands: {
+      _execute_action: {
+        suggested_key: {
+          default: 'Alt+Shift+S',
+        },
+        description: '打开快速收藏弹窗',
+      },
+    },
   },
 });
