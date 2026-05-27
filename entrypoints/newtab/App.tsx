@@ -1039,13 +1039,7 @@ export default function App() {
 
         {activeTab === 'home' && (
           <section className="home-page">
-            <div className="hero">
-              <div className="hero-left">
-                <h2>{greetingByTime(settings.language)} 👋</h2>
-                <p>{text.pageHomeDesc || text.searchHint}</p>
-              </div>
 
-            </div>
 
             <div className="search-card">
               <div className="search-row">

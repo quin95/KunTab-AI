@@ -2307,15 +2307,15 @@ select:focus {
 }
 
 .app-shell.has-scenic-bg .sidebar {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .sidebar {
-  background: rgba(15, 23, 42, 0.4);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.78);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .app-shell.has-scenic-bg .content {
@@ -2762,4 +2762,34 @@ select:focus {
 :root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-search-wrap {
   background: rgba(15, 23, 42, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Glassmorphic Greeting Banner under Scenic BG */
+.app-shell.has-scenic-bg .hero {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.75rem;
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+  align-self: flex-start;
+  width: auto;
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .hero {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Footer Section legibility under Scenic BG */
+.app-shell.has-scenic-bg .footer {
+  border-top: 1px dashed rgba(255, 255, 255, 0.2);
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.5);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .footer {
+  border-top: 1px dashed rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
