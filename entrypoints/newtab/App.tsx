@@ -6,6 +6,7 @@ import type {
   FolderNode,
   FolderOption,
   NavTab,
+  ChatMessage,
 } from './models';
 import {
   clearAppCache,
@@ -76,7 +77,15 @@ import {
   Image,
   Sparkles,
   Sliders,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Send,
+  Square,
+  ArrowUp,
 } from 'lucide-react';
+import { testAi, chat } from './lib/ai';
+import { buildCompareTrees, executeCategorization, serializeBookmarkContext, type DiffTreeNode } from './lib/aiBookmark';
 import './newtab.css';
 import logoImg from '../../assets/logo.png';
 
@@ -202,6 +211,21 @@ const LOCALE_TEXT = {
     sizeLarge: '较大',
     deleteFolder: '删除文件夹',
     more: '更多',
+    navAiAssistant: 'AI 智能助手',
+    pageAiAssistantDesc: '与 AI 智能助手对话，支持书签分类、去重清理、相关网站推荐以及领域收藏总结',
+    aiSettingsTitle: 'AI 助手设置',
+    aiProvider: 'AI 服务商',
+    aiProviderNone: '未启用',
+    aiModel: '模型名称',
+    aiBaseUrl: 'Base URL (API 接口地址)',
+    aiApiKey: 'API Key (密钥)',
+    aiApiKeyPlaceholder: '请输入 API 密钥，如为本地服务 Ollama 等可留空',
+    aiBaseUrlPlaceholder: '默认 API 地址，可填 OpenAI 兼容的中转/自建代理地址',
+    aiTestConnection: '测试连接',
+    aiTesting: '测试中...',
+    aiTestSuccess: '连接成功',
+    aiTestFailed: '连接失败',
+    aiSettingsNotice: '支持任何 OpenAI 兼容的 API 中转（如 DeepSeek/Kimi/Ollama 等）。所有的请求均在本地发送，不会向我们的服务器上传您的任何密钥或书签数据。',
   },
   'en-US': {
     navHome: 'Home',
@@ -306,6 +330,21 @@ const LOCALE_TEXT = {
     sizeLarge: 'Large',
     deleteFolder: 'Delete folder',
     more: 'More',
+    navAiAssistant: 'AI Assistant',
+    pageAiAssistantDesc: 'Chat with AI Assistant to categorize bookmarks, clean duplicates, recommend sites, or summarize interests',
+    aiSettingsTitle: 'AI Assistant Settings',
+    aiProvider: 'AI Provider',
+    aiProviderNone: 'Disabled',
+    aiModel: 'Model Name',
+    aiBaseUrl: 'Base URL',
+    aiApiKey: 'API Key',
+    aiApiKeyPlaceholder: 'Enter API Key or Token',
+    aiBaseUrlPlaceholder: 'Leave blank for default, or enter OpenAI-compatible proxy URL',
+    aiTestConnection: 'Test Connection',
+    aiTesting: 'Testing...',
+    aiTestSuccess: 'Connected',
+    aiTestFailed: 'Connection Failed',
+    aiSettingsNotice: 'Supports any OpenAI-compatible API endpoints (e.g. DeepSeek, Kimi, Ollama). All requests are sent directly from your browser. Your keys and bookmarks are never uploaded to our servers.',
   },
 } as const;
 
@@ -364,6 +403,30 @@ export default function App() {
   // Bookmarks Table Row Menu State
   const [activeActionRowId, setActiveActionRowId] = useState<string | null>(null);
 
+  // AI Connection State
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ ok: boolean; latencyMs: number; message: string } | null>(null);
+
+  // AI Bookmark Assistant Page State
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInputValue, setChatInputValue] = useState('');
+  const [chatGenerating, setChatGenerating] = useState(false);
+  const [chatAbortController, setChatAbortController] = useState<AbortController | null>(null);
+
+  // States for embedded operations
+  const [executingCardId, setExecutingCardId] = useState<string | null>(null);
+  const [cardErrorMessage, setCardErrorMessage] = useState<Record<string, string>>({});
+  const [cardSuccessMessage, setCardSuccessMessage] = useState<Record<string, string>>({});
+  const [duplicateSelections, setDuplicateSelections] = useState<Record<string, string[]>>({});
+  const [compareTreeExpanded, setCompareTreeExpanded] = useState<Record<string, boolean>>({});
+
+  const toggleCompareFolder = (id: string) => {
+    setCompareTreeExpanded((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const text = LOCALE_TEXT[settings.language] as Record<string, string>;
   const fmt = (tpl: string, vars: Record<string, string | number>) =>
     tpl.replace(/\{(\w+)\}/g, (_, key: string) => String(vars[key] ?? ''));
@@ -371,6 +434,7 @@ export default function App() {
   const navItems: Array<{ tab: NavTab; label: string; icon: typeof Home }> = [
     { tab: 'home', label: text.navHome, icon: Home },
     { tab: 'bookmarks', label: text.navBookmarks, icon: Bookmark },
+    { tab: 'ai-assistant', label: text.navAiAssistant, icon: Sparkles },
     { tab: 'backup', label: text.navBackup, icon: CircleArrowDown },
     { tab: 'settings', label: text.navSettings, icon: Settings },
   ];
@@ -384,6 +448,8 @@ export default function App() {
         return text.navHome;
       case 'bookmarks':
         return text.navBookmarks;
+      case 'ai-assistant':
+        return text.navAiAssistant;
       case 'backup':
         return text.navBackup;
       case 'settings':
@@ -485,6 +551,18 @@ export default function App() {
     setBgUrlInput(settings.customBgUrl || '');
   }, [settings.customBgUrl]);
 
+  // Auto scroll chat history to bottom
+  useEffect(() => {
+    if (activeTab === 'ai-assistant') {
+      const scrollEl = document.getElementById('chat-history-scroll');
+      if (scrollEl) {
+        requestAnimationFrame(() => {
+          scrollEl.scrollTop = scrollEl.scrollHeight;
+        });
+      }
+    }
+  }, [chatMessages, chatGenerating, activeTab]);
+
   const currentBookmarkNode = useMemo(() => {
     if (selectedFolderId === '0') return null;
     const findNode = (nodes: BookmarkNode[]): BookmarkNode | null => {
@@ -516,6 +594,7 @@ export default function App() {
     };
     return findNode(folderTree);
   }, [folderTree, selectedFolderId]);
+
 
   const displayItems = useMemo(() => {
     const countBookmarksInNode = (node: BookmarkNode): number => {
@@ -949,6 +1028,295 @@ export default function App() {
     await clearAppCache();
     await reloadStorage();
     showToast(text.clearedCache);
+  };
+
+  const onTestAiConnection = async () => {
+    setTestingConnection(true);
+    setConnectionResult(null);
+    const result = await testAi(settings);
+    setConnectionResult(result);
+    setTestingConnection(false);
+  };
+
+  const onSendChatMessage = async (customText?: string) => {
+    const textToSend = (customText || chatInputValue).trim();
+    if (!textToSend) return;
+
+    if (settings.aiProvider === 'none' || !settings.aiApiKey) {
+      alert('请先在设置中配置并启用 AI 助手。');
+      setActiveTab('settings');
+      return;
+    }
+
+    const userMsgId = `user-${Date.now()}`;
+    const userMsg: ChatMessage = {
+      id: userMsgId,
+      role: 'user',
+      content: textToSend,
+      timestamp: Date.now(),
+    };
+
+    const updatedMessages = [...chatMessages, userMsg];
+    setChatMessages(updatedMessages);
+    setChatInputValue('');
+    setChatGenerating(true);
+
+    const controller = new AbortController();
+    setChatAbortController(controller);
+
+    const assistantMsgId = `assistant-${Date.now()}`;
+    const assistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+    };
+    
+    setChatMessages((prev) => [...prev, assistantMsg]);
+
+    try {
+      const scopeBookmarks = allBookmarks;
+      const serializedContext = serializeBookmarkContext(scopeBookmarks, folderOptions);
+
+      const systemPrompt = `你是一个集成了强大浏览器书签控制能力的 AI 智能助手，名叫 "KunTab AI 智能助手"。
+你能够通过分析用户的全部书签/选定文件夹书签，帮助用户整理目录、清理重复、发现兴趣并推荐网站。
+
+【当前用户的书签上下文】：
+${serializedContext}
+
+【核心运行机制】：
+当用户向你发送指令时，你不仅需要以亲切、口语化的中文进行解释，还需要在回答的最末尾，根据用户的命令意图，附带一个特定格式的 JSON 代码块，以便系统为其渲染交互式功能卡片。
+
+【卡片代码块输出规范】：
+请根据用户请求的类型，在回答末尾输出且仅输出以下其中一种代码块格式（三反引号包裹）：
+
+1. 整理书签时 (用户要你分类、整理、归档书签，如点击了“按主题帮我整理书签”或发送类似命令)：
+必须输出 \`json-bookmark-moves\` 代码块，只包含需要发生路径改变的书签：
+\`\`\`json-bookmark-moves
+{
+  "newFolders": ["全部书签 / 新分类名", "全部书签 / 新分类名 / 子分类"],
+  "moves": [
+    { "bookmarkId": "待移动书签的ID", "targetFolderPath": "目标文件夹的路径" }
+  ]
+}
+\`\`\`
+
+2. 查找重复书签时 (用户要你排查、查找、删除重复)：
+必须输出 \`json-bookmark-duplicates\` 代码块，按 URL 分组，格式如下：
+\`\`\`json-bookmark-duplicates
+{
+  "duplicates": [
+    {
+      "url": "重复网址",
+      "items": [
+        { "id": "书签ID", "title": "书签标题", "folderPath": "所属文件夹路径", "dateAdded": 1716000000000 }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+3. 推荐网站时 (用户要你推荐网站)：
+必须输出 \`json-bookmark-recommendations\` 代码块，格式如下：
+\`\`\`json-bookmark-recommendations
+{
+  "recommendations": [
+    { "title": "推荐网站标题", "url": "网址", "desc": "推荐原因/简介", "tag": "分类标签" }
+  ]
+}
+\`\`\`
+
+4. 总结领域时 (用户要你分析其收藏的偏好与结构)：
+必须输出 \`json-bookmark-summary\` 块，格式如下：
+\`\`\`json-bookmark-summary
+{
+  "categories": [
+    { "name": "领域名称", "count": 12, "percentage": 40 }
+  ],
+  "totalCount": 30
+}
+\`\`\`
+
+【注意事项】：
+- 所有的 JSON 代码块都必须使用标准的 Markdown 语法（三反引号加对应的语言标识）。
+- 绝不要把现有无需移动的书签也写在 \`moves\` 列表中，只写发生变化的书签。
+- JSON 数据必须保证能被 JavaScript 的 JSON.parse 成功解析。请确保输出内容不要有多余字符，避免 JSON 解析失败。`;
+
+      const historyList = updatedMessages.map((m) => ({
+        role: m.role === 'user' ? 'user' as const : 'assistant' as const,
+        content: m.content,
+      }));
+
+      const responseText = await chat(
+        settings,
+        [
+          { role: 'system', content: systemPrompt },
+          ...historyList,
+        ],
+        {
+          signal: controller.signal,
+          onChunk: (text) => {
+            let cardType: ChatMessage['cardType'];
+            let cardData: any = null;
+            let cleanText = text;
+
+            const blockStartIdx = text.indexOf('```json-bookmark-');
+            if (blockStartIdx !== -1) {
+              cleanText = text.substring(0, blockStartIdx).trim();
+              const notice = '\n\n*(正在分析数据并生成交互卡片，请稍候...)*';
+              cleanText = cleanText ? cleanText + notice : '*(正在分析数据并生成交互卡片，请稍候...)*';
+              
+              // Check if completed inside text chunk
+              const blockRegex = /```json-bookmark-(moves|duplicates|recommendations|summary)\n([\s\S]*?)\n```/g;
+              const match = blockRegex.exec(text);
+              if (match) {
+                const type = match[1];
+                const jsonStr = match[2].trim();
+                try {
+                  cardData = JSON.parse(jsonStr);
+                  cardType = type as ChatMessage['cardType'];
+                  // If complete, strip the notice and the code block
+                  const cleanBase = text.replace(match[0], '').trim();
+                  cleanText = cleanBase;
+                } catch (e) {
+                  // Incomplete or invalid JSON, keep notice
+                }
+              }
+            }
+
+            setChatMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMsgId
+                  ? { 
+                      ...msg, 
+                      content: cleanText,
+                      cardType,
+                      cardData
+                    }
+                  : msg
+              )
+            );
+          },
+        }
+      );
+
+      let cardType: ChatMessage['cardType'];
+      let cardData: any = null;
+      let cleanText = responseText;
+
+      const blockRegex = /```json-bookmark-(moves|duplicates|recommendations|summary)\n([\s\S]*?)\n```/g;
+      const match = blockRegex.exec(responseText);
+
+      if (match) {
+        const type = match[1];
+        const jsonStr = match[2].trim();
+        
+        try {
+          cardData = JSON.parse(jsonStr);
+          cardType = type as ChatMessage['cardType'];
+          cleanText = responseText.replace(match[0], '').trim();
+        } catch (e) {
+          console.error('Failed to parse chat card JSON:', jsonStr, e);
+          cleanText = responseText + '\n\n*(提示：助手生成了数据卡片，但 JSON 数据格式损坏，无法显示交互式卡片。)*';
+        }
+      }
+
+      setChatMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? {
+                ...msg,
+                content: cleanText,
+                cardType,
+                cardData,
+              }
+            : msg
+        )
+      );
+
+      if (cardType === 'duplicates' && cardData?.duplicates) {
+        const idsToSelect: string[] = [];
+        cardData.duplicates.forEach((group: any) => {
+          const sorted = [...(group.items || [])].sort((a, b) => (a.dateAdded || 0) - (b.dateAdded || 0));
+          if (sorted.length > 1) {
+            sorted.slice(1).forEach((item) => idsToSelect.push(item.id));
+          }
+        });
+        setDuplicateSelections((prev) => ({ ...prev, [assistantMsgId]: idsToSelect }));
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        setChatMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? { ...msg, content: msg.content + '\n\n*(已终止生成)*' }
+              : msg
+          )
+        );
+      } else {
+        setChatMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? { ...msg, content: msg.content + `\n\n*(生成错误: ${err?.message || String(err)} )*` }
+              : msg
+          )
+        );
+      }
+    } finally {
+      setChatGenerating(false);
+      setChatAbortController(null);
+    }
+  };
+
+  const onAbortGeneration = () => {
+    if (chatAbortController) {
+      chatAbortController.abort();
+    }
+  };
+
+  const onExecuteCardAction = async (cardType: 'moves' | 'duplicates', cardData: any, messageId: string) => {
+    setExecutingCardId(messageId);
+    setCardErrorMessage((prev) => ({ ...prev, [messageId]: '' }));
+    setCardSuccessMessage((prev) => ({ ...prev, [messageId]: '' }));
+
+    try {
+      if (cardType === 'moves') {
+        await executeCategorization(cardData);
+        await reloadBookmarks();
+        setCardSuccessMessage((prev) => ({ ...prev, [messageId]: '书签分类整理方案已成功执行！' }));
+        showToast('书签分类整理成功！');
+      } else if (cardType === 'duplicates') {
+        const selectedIds = duplicateSelections[messageId] || [];
+        if (selectedIds.length === 0) {
+          throw new Error('请先勾选需要清理的重复书签。');
+        }
+        for (const id of selectedIds) {
+          await deleteBookmark(id);
+        }
+        await reloadBookmarks();
+        setCardSuccessMessage((prev) => ({ ...prev, [messageId]: `成功清理了 ${selectedIds.length} 个重复书签！` }));
+        showToast('重复书签清理完毕！');
+      }
+    } catch (err: any) {
+      setCardErrorMessage((prev) => ({ ...prev, [messageId]: err?.message || String(err) }));
+    } finally {
+      setExecutingCardId(null);
+    }
+  };
+
+  const onAddRecommendedBookmark = async (title: string, url: string, tag: string) => {
+    try {
+      const parentId = folderOptions[0]?.id || '1';
+      await ext.bookmarks.create({
+        parentId,
+        title,
+        url,
+      });
+      await reloadBookmarks();
+      showToast(`已收藏推荐网站「${title}」`);
+    } catch (err) {
+      alert('添加书签失败，请确认书签 API 权限。');
+    }
   };
 
   const showToast = (msg: string) => {
@@ -1525,6 +1893,154 @@ export default function App() {
           </section>
         )}
 
+        {activeTab === 'ai-assistant' && (
+          <section className="ai-chat-container">
+            <div className="chat-history" id="chat-history-scroll">
+              {chatMessages.map((msg) => {
+                const isUser = msg.role === 'user';
+                return (
+                  <div key={msg.id} className={`chat-message-row ${msg.role}`}>
+                    <div className={`chat-avatar ${msg.role}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {isUser ? (
+                        <img src={logoImg} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Sparkles size={14} />
+                      )}
+                    </div>
+                    <div className="chat-bubble">
+                      {msg.content ? (
+                        <MarkdownText text={msg.content} />
+                      ) : (
+                        <div className="chat-loading-container-inner" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div className="chat-loading-dots">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                          </div>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>
+                            AI 正在思考并整理书签，请稍候...
+                          </span>
+                        </div>
+                      )}
+                      
+                      {msg.cardType === 'moves' && (
+                        <RefactorCompareCard
+                          cardData={msg.cardData}
+                          messageId={msg.id}
+                          executingCardId={executingCardId}
+                          cardSuccessMessage={cardSuccessMessage}
+                          cardErrorMessage={cardErrorMessage}
+                          onExecuteCardAction={onExecuteCardAction}
+                          bookmarkTree={bookmarkTree}
+                          compareTreeExpanded={compareTreeExpanded}
+                          toggleCompareFolder={toggleCompareFolder}
+                        />
+                      )}
+
+                      {msg.cardType === 'duplicates' && (
+                        <DuplicateCleanCard
+                          cardData={msg.cardData}
+                          messageId={msg.id}
+                          executingCardId={executingCardId}
+                          cardSuccessMessage={cardSuccessMessage}
+                          cardErrorMessage={cardErrorMessage}
+                          onExecuteCardAction={onExecuteCardAction}
+                          duplicateSelections={duplicateSelections}
+                          setDuplicateSelections={setDuplicateSelections}
+                        />
+                      )}
+
+                      {msg.cardType === 'recommendations' && (
+                        <RecommendationsCard
+                          cardData={msg.cardData}
+                          onAddRecommendedBookmark={onAddRecommendedBookmark}
+                        />
+                      )}
+
+                      {msg.cardType === 'summary' && (
+                        <SummaryReportCard
+                          cardData={msg.cardData}
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Welcome State Capsule Commands */}
+              {chatMessages.length === 0 && (
+                <div className="chat-welcome">
+                  <div className="chat-welcome-icon">
+                    <Sparkles size={24} />
+                  </div>
+                  <h2>KunTab AI 智能助手</h2>
+                  <p>我是你的浏览器书签管家，我可以帮你自动分类、去重清理、推荐新内容或总结你的收藏偏好。</p>
+                  
+                  <div className="chat-suggest-title">你可以这样问我</div>
+                  <div className="chat-suggest-group">
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={() => onSendChatMessage('按主题帮我整理书签')}
+                    >
+                      <Folder size={16} style={{ color: 'var(--primary)' }} />
+                      <span>按主题帮我整理书签</span>
+                    </button>
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={() => onSendChatMessage('找出可能重复的书签')}
+                    >
+                      <Trash2 size={16} style={{ color: '#ef4444' }} />
+                      <span>找出可能重复的书签</span>
+                    </button>
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={() => onSendChatMessage('根据我的书签推荐相关网站')}
+                    >
+                      <Globe size={16} style={{ color: '#10b981' }} />
+                      <span>根据我的书签推荐相关网站</span>
+                    </button>
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={() => onSendChatMessage('总结我最常收藏的领域')}
+                    >
+                      <Sliders size={16} style={{ color: '#f59e0b' }} />
+                      <span>总结我最常收藏的领域</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input Bar */}
+            <div className="chat-input-container">
+              <textarea
+                className="chat-input-textarea"
+                placeholder={settings.aiProvider === 'none' ? '请先配置 AI 助手...' : '给 AI 助手发送消息... (Shift + Enter 换行)'}
+                value={chatInputValue}
+                disabled={settings.aiProvider === 'none'}
+                onChange={(e) => setChatInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!chatGenerating) {
+                      onSendChatMessage();
+                    }
+                  }
+                }}
+                rows={1}
+              />
+              <button
+                className={`chat-send-btn ${chatGenerating ? 'stop' : ''}`}
+                onClick={chatGenerating ? onAbortGeneration : () => onSendChatMessage()}
+                disabled={settings.aiProvider === 'none' || (!chatGenerating && !chatInputValue.trim())}
+                title={chatGenerating ? '停止生成' : '发送消息'}
+              >
+                {chatGenerating ? <Square size={18} /> : <ArrowUp size={20} />}
+              </button>
+            </div>
+          </section>
+        )}
+
         {activeTab === 'settings' && (
           <section className="settings-page">
             <article className="settings-card">
@@ -1731,6 +2247,142 @@ export default function App() {
                   <option value="medium">{text.sizeMedium}</option>
                   <option value="large">{text.sizeLarge}</option>
                 </select>
+              </div>
+            </article>
+
+            <article className="settings-card">
+              <h3>{text.aiSettingsTitle}</h3>
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Sparkles size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.aiProvider}</span>
+                    <span className="setting-desc">选择要连接的 AI 大模型服务商</span>
+                  </div>
+                </div>
+                <div className="segmented-control">
+                  <button
+                    className={settings.aiProvider === 'none' ? 'segmented-btn active' : 'segmented-btn'}
+                    onClick={() => saveSettingsPatch({ aiProvider: 'none' })}
+                  >
+                    {text.aiProviderNone}
+                  </button>
+                  <button
+                    className={settings.aiProvider === 'openai' ? 'segmented-btn active' : 'segmented-btn'}
+                    onClick={() => saveSettingsPatch({ aiProvider: 'openai' })}
+                  >
+                    OpenAI
+                  </button>
+                  <button
+                    className={settings.aiProvider === 'anthropic' ? 'segmented-btn active' : 'segmented-btn'}
+                    onClick={() => saveSettingsPatch({ aiProvider: 'anthropic' })}
+                  >
+                    Anthropic
+                  </button>
+                </div>
+              </div>
+
+              {settings.aiProvider !== 'none' && (
+                <>
+                  <div className="settings-row">
+                    <div className="setting-left">
+                      <div className="setting-icon-wrap"><Sliders size={18} /></div>
+                      <div className="setting-meta">
+                        <span className="setting-title">{text.aiModel}</span>
+                        <span className="setting-desc">输入对应服务商的模型名称标识</span>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={settings.aiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-latest'}
+                      value={settings.aiModel}
+                      onChange={(event) => saveSettingsPatch({ aiModel: event.target.value })}
+                    />
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="setting-left">
+                      <div className="setting-icon-wrap"><Globe size={18} /></div>
+                      <div className="setting-meta">
+                        <span className="setting-title">{text.aiBaseUrl}</span>
+                        <span className="setting-desc">{text.aiBaseUrlPlaceholder}</span>
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder={settings.aiProvider === 'openai' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com'}
+                      value={settings.aiBaseUrl}
+                      onChange={(event) => saveSettingsPatch({ aiBaseUrl: event.target.value })}
+                    />
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="setting-left">
+                      <div className="setting-icon-wrap"><Type size={18} /></div>
+                      <div className="setting-meta">
+                        <span className="setting-title">{text.aiApiKey}</span>
+                        <span className="setting-desc">{text.aiApiKeyPlaceholder}</span>
+                      </div>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="••••••••••••••••"
+                      value={settings.aiApiKey}
+                      onChange={(event) => saveSettingsPatch({ aiApiKey: event.target.value })}
+                    />
+                  </div>
+
+                  <div className="settings-row">
+                    <div className="setting-left">
+                      <div className="setting-icon-wrap"><CheckCircle2 size={18} /></div>
+                      <div className="setting-meta">
+                        <span className="setting-title">{text.aiTestConnection}</span>
+                        <span className="setting-desc">验证当前 AI 的连通性与响应速度</span>
+                      </div>
+                    </div>
+                    <div className="about-row-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {connectionResult && (
+                        <span className={`ai-test-badge ${connectionResult.ok ? 'success' : 'failed'}`}>
+                          {connectionResult.ok ? (
+                            <>
+                              <CheckCircle2 size={14} style={{ marginRight: '4px' }} />
+                              {text.aiTestSuccess} ({connectionResult.latencyMs}ms)
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={14} style={{ marginRight: '4px' }} />
+                              {text.aiTestFailed}
+                            </>
+                          )}
+                        </span>
+                      )}
+                      <button
+                        className="setting-btn-primary"
+                        onClick={onTestAiConnection}
+                        disabled={testingConnection || !settings.aiApiKey}
+                      >
+                        {testingConnection ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" style={{ marginRight: '4px' }} />
+                            {text.aiTesting}
+                          </>
+                        ) : (
+                          text.aiTestConnection
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {connectionResult && !connectionResult.ok && (
+                    <div className="ai-test-error-log">
+                      {connectionResult.message}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="settings-notice-box">
+                <Info size={16} />
+                <span>{text.aiSettingsNotice}</span>
               </div>
             </article>
 
@@ -2007,4 +2659,660 @@ function FolderTree({
   };
 
   return <div>{list.map((node) => renderNode(node))}</div>;
+}
+
+function CompareTreeNode({
+  node,
+  expandedState,
+  toggleExpand,
+}: {
+  node: DiffTreeNode;
+  expandedState: Record<string, boolean>;
+  toggleExpand: (id: string) => void;
+}) {
+  const isExpanded = expandedState[node.id] ?? true;
+  const hasChildren = node.children && node.children.length > 0;
+
+  const renderIcon = () => {
+    if (node.isFolder) {
+      return <Folder size={14} className="tree-folder-icon" />;
+    }
+    return (
+      <img
+        src={faviconOf(node.url || '')}
+        alt=""
+        className="tree-bookmark-favicon"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src =
+            'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+        }}
+      />
+    );
+  };
+
+  const getStatusClass = () => {
+    switch (node.status) {
+      case 'moved-out':
+        return 'node-moved-out';
+      case 'moved-in':
+        return 'node-moved-in';
+      case 'created':
+        return 'node-created';
+      default:
+        return 'node-normal';
+    }
+  };
+
+  return (
+    <div className={`compare-tree-node ${getStatusClass()}`}>
+      <div className="node-row" onClick={() => node.isFolder && toggleExpand(node.id)}>
+        <span className="node-expand-arrow">
+          {node.isFolder && hasChildren && (isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
+          {node.isFolder && !hasChildren && <span style={{ width: 12, display: 'inline-block' }} />}
+        </span>
+        <span className="node-icon">{renderIcon()}</span>
+        <span className="node-title" title={node.title}>
+          {node.title}
+        </span>
+        {node.status === 'moved-out' && (
+          <span className="node-badge badge-moved-out">将移至: {node.targetFolder?.split(' / ').pop()}</span>
+        )}
+        {node.status === 'moved-in' && <span className="node-badge badge-moved-in">移入</span>}
+        {node.status === 'created' && <span className="node-badge badge-created">新建</span>}
+      </div>
+      {node.isFolder && hasChildren && isExpanded && (
+        <div className="node-children">
+          {node.children.map((child) => (
+            <CompareTreeNode
+              key={child.id}
+              node={child}
+              expandedState={expandedState}
+              toggleExpand={toggleExpand}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MarkdownText({ text }: { text: string }) {
+  const lines = text.split('\n');
+  const blocks: React.ReactNode[] = [];
+  
+  let currentBlockType: 'p' | 'ul' | 'ol' | 'blockquote' | 'code' | null = null;
+  let currentLines: string[] = [];
+  let blockKey = 0;
+  let codeLang = '';
+
+  const parseInline = (str: string): React.ReactNode[] => {
+    const unionRegex = /(\*\*.*?\*\*|\*.*?\*|`.*?`|https?:\/\/\S+)/g;
+    const tokens = str.split(unionRegex);
+    
+    return tokens.map((token, idx) => {
+      if (token.startsWith('**') && token.endsWith('**')) {
+        return <strong key={idx}>{token.slice(2, -2)}</strong>;
+      }
+      if (token.startsWith('*') && token.endsWith('*')) {
+        return <em key={idx}>{token.slice(1, -1)}</em>;
+      }
+      if (token.startsWith('`') && token.endsWith('`')) {
+        return <code key={idx}>{token.slice(1, -1)}</code>;
+      }
+      if (token.startsWith('http://') || token.startsWith('https://')) {
+        return (
+          <a key={idx} href={token} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+            {token}
+          </a>
+        );
+      }
+      return token;
+    });
+  };
+
+  const flushBlock = () => {
+    if (currentLines.length === 0) return;
+
+    const key = `block-${blockKey++}`;
+    if (currentBlockType === 'code') {
+      blocks.push(
+        <pre key={key} className="chat-markdown-code-block" style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: '8px',
+          padding: '0.85rem',
+          overflowX: 'auto',
+          margin: '0.5rem 0',
+          fontFamily: 'monospace',
+          fontSize: '0.85rem'
+        }}>
+          {codeLang && <div className="code-lang-label" style={{
+            fontSize: '0.72rem',
+            color: 'var(--muted)',
+            textTransform: 'uppercase',
+            marginBottom: '0.4rem',
+            fontWeight: 700,
+            borderBottom: '1px solid var(--line)',
+            paddingBottom: '0.2rem'
+          }}>{codeLang}</div>}
+          <code style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{currentLines.join('\n')}</code>
+        </pre>
+      );
+    } else if (currentBlockType === 'ul') {
+      blocks.push(
+        <ul key={key} style={{ margin: '0.5rem 0 0.5rem 1.25rem', listStyleType: 'disc' }}>
+          {currentLines.map((line, idx) => (
+            <li key={idx} style={{ marginBottom: '0.25rem' }}>{parseInline(line)}</li>
+          ))}
+        </ul>
+      );
+    } else if (currentBlockType === 'ol') {
+      blocks.push(
+        <ol key={key} style={{ margin: '0.5rem 0 0.5rem 1.25rem', listStyleType: 'decimal' }}>
+          {currentLines.map((line, idx) => (
+            <li key={idx} style={{ marginBottom: '0.25rem' }}>{parseInline(line)}</li>
+          ))}
+        </ol>
+      );
+    } else if (currentBlockType === 'blockquote') {
+      blocks.push(
+        <blockquote key={key} style={{
+          borderLeft: '4px solid var(--primary)',
+          paddingLeft: '1rem',
+          color: 'var(--muted)',
+          margin: '0.5rem 0',
+          fontStyle: 'italic'
+        }}>
+          {currentLines.map((line, idx) => (
+            <p key={idx} style={{ margin: 0 }}>{parseInline(line)}</p>
+          ))}
+        </blockquote>
+      );
+    } else {
+      currentLines.forEach((line, idx) => {
+        blocks.push(
+          <p key={`${key}-${idx}`} style={{ marginBottom: '0.5rem', lineHeight: '1.5' }}>
+            {parseInline(line)}
+          </p>
+        );
+      });
+    }
+
+    currentLines = [];
+    currentBlockType = null;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      if (currentBlockType === 'code') {
+        flushBlock();
+      } else {
+        flushBlock();
+        currentBlockType = 'code';
+        codeLang = trimmed.slice(3).trim();
+      }
+      continue;
+    }
+
+    if (currentBlockType === 'code') {
+      currentLines.push(line);
+      continue;
+    }
+
+    if (trimmed.startsWith('#')) {
+      flushBlock();
+      const level = trimmed.match(/^#+/)?.[0].length || 1;
+      const content = trimmed.replace(/^#+\s*/, '');
+      const HeadingTag = `h${Math.min(level + 1, 6)}` as 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+      blocks.push(
+        <HeadingTag key={`h-${i}`} style={{
+          fontWeight: 700,
+          marginTop: '0.75rem',
+          marginBottom: '0.4rem',
+          lineHeight: '1.3'
+        }}>
+          {parseInline(content)}
+        </HeadingTag>
+      );
+      continue;
+    }
+
+    if (trimmed.startsWith('>')) {
+      if (currentBlockType !== 'blockquote') {
+        flushBlock();
+        currentBlockType = 'blockquote';
+      }
+      currentLines.push(trimmed.slice(1).trim());
+      continue;
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      if (currentBlockType !== 'ul') {
+        flushBlock();
+        currentBlockType = 'ul';
+      }
+      currentLines.push(trimmed.slice(2));
+      continue;
+    }
+
+    if (/^\d+\.\s/.test(trimmed)) {
+      if (currentBlockType !== 'ol') {
+        flushBlock();
+        currentBlockType = 'ol';
+      }
+      currentLines.push(trimmed.replace(/^\d+\.\s/, ''));
+      continue;
+    }
+
+    if (trimmed === '') {
+      flushBlock();
+      continue;
+    }
+
+    if (currentBlockType !== 'p' && currentBlockType !== null) {
+      flushBlock();
+    }
+    currentBlockType = 'p';
+    currentLines.push(line);
+  }
+
+  flushBlock();
+
+  return <div className="chat-bubble-text">{blocks}</div>;
+}
+
+function RefactorCompareCard({
+  cardData,
+  messageId,
+  executingCardId,
+  cardSuccessMessage,
+  cardErrorMessage,
+  onExecuteCardAction,
+  bookmarkTree,
+  compareTreeExpanded,
+  toggleCompareFolder,
+}: {
+  cardData: any;
+  messageId: string;
+  executingCardId: string | null;
+  cardSuccessMessage: Record<string, string>;
+  cardErrorMessage: Record<string, string>;
+  onExecuteCardAction: (cardType: 'moves' | 'duplicates', cardData: any, messageId: string) => Promise<void>;
+  bookmarkTree: BookmarkNode[];
+  compareTreeExpanded: Record<string, boolean>;
+  toggleCompareFolder: (id: string) => void;
+}) {
+  const compareTrees = useMemo(() => {
+    if (!bookmarkTree || bookmarkTree.length === 0 || !cardData) return null;
+    try {
+      return buildCompareTrees(bookmarkTree, cardData);
+    } catch (e) {
+      console.error('Error building compare trees:', e);
+      return null;
+    }
+  }, [bookmarkTree, cardData]);
+
+  const isExecuting = executingCardId === messageId;
+  const successMsg = cardSuccessMessage[messageId];
+  const errMsg = cardErrorMessage[messageId];
+
+  if (!compareTrees) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>书签分类整理方案</span>
+        </div>
+        <div className="card-body">
+          <div className="ai-error-box" style={{ margin: 0 }}>
+            <XCircle size={16} />
+            <span>分类整理方案数据结构有误，无法生成对比视图。</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>书签分类整理方案预览</span>
+        {cardData.newFolders && cardData.newFolders.length > 0 && (
+          <span className="folder-pill tag-design">将新建 {cardData.newFolders.length} 个分类</span>
+        )}
+      </div>
+      <div className="card-body">
+        <div className="compare-panels" style={{ maxHeight: '350px', overflowY: 'auto', gridTemplateColumns: '1fr' }}>
+          <div className="compare-panel-card" style={{ width: '100%' }}>
+            <div className="panel-title-row" style={{ padding: '0.25rem 0.5rem', borderBottom: '1px solid var(--line)' }}>
+              <strong className="success-text">整理后 (AI 规划结构)</strong>
+            </div>
+            <div className="tree-scroll-area" style={{ padding: '0.5rem 0' }}>
+              <CompareTreeNode
+                node={compareTrees.afterTree}
+                expandedState={compareTreeExpanded}
+                toggleExpand={toggleCompareFolder}
+              />
+            </div>
+          </div>
+        </div>
+
+        {errMsg && (
+          <div className="ai-error-box" style={{ marginTop: '10px', marginBottom: 0 }}>
+            <XCircle size={16} />
+            <span>{errMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="ai-info-warning-box" style={{ marginTop: '10px', marginBottom: 0, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: '#10b981', color: '#10b981' }}>
+            <CheckCircle2 size={16} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+      </div>
+      {!successMsg && (
+        <div className="card-footer">
+          <button
+            className="primary highlight"
+            disabled={isExecuting}
+            onClick={() => onExecuteCardAction('moves', cardData, messageId)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {isExecuting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+            {isExecuting ? '正在执行...' : '确认执行书签整理'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DuplicateCleanCard({
+  cardData,
+  messageId,
+  executingCardId,
+  cardSuccessMessage,
+  cardErrorMessage,
+  onExecuteCardAction,
+  duplicateSelections,
+  setDuplicateSelections,
+}: {
+  cardData: any;
+  messageId: string;
+  executingCardId: string | null;
+  cardSuccessMessage: Record<string, string>;
+  cardErrorMessage: Record<string, string>;
+  onExecuteCardAction: (cardType: 'moves' | 'duplicates', cardData: any, messageId: string) => Promise<void>;
+  duplicateSelections: Record<string, string[]>;
+  setDuplicateSelections: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+}) {
+  const isExecuting = executingCardId === messageId;
+  const successMsg = cardSuccessMessage[messageId];
+  const errMsg = cardErrorMessage[messageId];
+  const currentSelections = duplicateSelections[messageId] || [];
+
+  const handleToggle = (id: string) => {
+    setDuplicateSelections((prev) => {
+      const list = prev[messageId] || [];
+      const newList = list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+      return { ...prev, [messageId]: newList };
+    });
+  };
+
+  const duplicates = cardData?.duplicates || [];
+
+  if (duplicates.length === 0) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>清理重复书签</span>
+        </div>
+        <div className="card-body">
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>未发现重复书签。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>查找重复书签</span>
+        <span className="folder-pill tag-dev">共发现 {duplicates.length} 组重复网址</span>
+      </div>
+      <div className="card-body" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+        {duplicates.map((group: any, gIdx: number) => (
+          <div key={gIdx} className="duplicate-group">
+            <div className="duplicate-url-header">{group.url}</div>
+            <div className="duplicate-items-list">
+              {(group.items || []).map((item: any) => {
+                const isChecked = currentSelections.includes(item.id);
+                return (
+                  <div
+                    key={item.id}
+                    className="duplicate-item-row"
+                    onClick={() => !successMsg && handleToggle(item.id)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      disabled={!!successMsg}
+                      onChange={() => {}}
+                      style={{ cursor: successMsg ? 'default' : 'pointer' }}
+                    />
+                    <div className="duplicate-item-meta">
+                      <div className="duplicate-item-title" title={item.title}>
+                        {item.title}
+                      </div>
+                      <div className="duplicate-item-path">
+                        <Folder size={12} />
+                        <span>{item.folderPath}</span>
+                      </div>
+                    </div>
+                    {item.dateAdded && (
+                      <div className="duplicate-item-time">
+                        {formatDateTime(item.dateAdded)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {errMsg && (
+          <div className="ai-error-box" style={{ marginTop: '10px', marginBottom: 0 }}>
+            <XCircle size={16} />
+            <span>{errMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="ai-info-warning-box" style={{ marginTop: '10px', marginBottom: 0, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: '#10b981', color: '#10b981' }}>
+            <CheckCircle2 size={16} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+      </div>
+
+      {!successMsg && (
+        <div className="card-footer">
+          <span style={{ fontSize: '0.8rem', color: 'var(--muted)', alignSelf: 'center', marginRight: 'auto' }}>
+            已勾选 {currentSelections.length} 个书签进行清理
+          </span>
+          <button
+            className="primary stop"
+            disabled={isExecuting || currentSelections.length === 0}
+            onClick={() => onExecuteCardAction('duplicates', cardData, messageId)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--danger)', color: 'white' }}
+          >
+            {isExecuting ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+            {isExecuting ? '正在清理...' : '一键清理选中的重复项'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecommendationsCard({
+  cardData,
+  onAddRecommendedBookmark,
+}: {
+  cardData: any;
+  onAddRecommendedBookmark: (title: string, url: string, tag: string) => Promise<void>;
+}) {
+  const [addedUrls, setAddedUrls] = useState<string[]>([]);
+  const recommendations = cardData?.recommendations || [];
+
+  const handleAdd = async (title: string, url: string, tag: string) => {
+    await onAddRecommendedBookmark(title, url, tag);
+    setAddedUrls((prev) => [...prev, url]);
+  };
+
+  if (recommendations.length === 0) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>推荐相关网站</span>
+        </div>
+        <div className="card-body">
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>未生成推荐网站列表。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>网站推荐网格</span>
+        <span className="folder-pill tag-tool">AI 智能推荐</span>
+      </div>
+      <div className="card-body">
+        <div className="rec-grid">
+          {recommendations.map((item: any, idx: number) => {
+            const isAdded = addedUrls.includes(item.url);
+            return (
+              <div key={idx} className="rec-item-card">
+                <div className="rec-item-header">
+                  <img
+                    src={faviconOf(item.url)}
+                    alt=""
+                    className="rec-item-icon"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src =
+                        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
+                    }}
+                  />
+                  <div className="rec-item-title-wrap">
+                    <div className="rec-item-title" title={item.title}>
+                      {item.title}
+                    </div>
+                    {item.tag && <span className="rec-item-tag">{item.tag}</span>}
+                  </div>
+                </div>
+                <div className="rec-item-desc" title={item.desc}>
+                  {item.desc}
+                </div>
+                <div className="rec-item-actions">
+                  <button
+                    className={isAdded ? 'secondary' : 'primary'}
+                    disabled={isAdded}
+                    onClick={() => !isAdded && handleAdd(item.title, item.url, item.tag)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      cursor: isAdded ? 'default' : 'pointer'
+                    }}
+                  >
+                    {isAdded ? <Check size={12} /> : <Plus size={12} />}
+                    {isAdded ? '已收藏' : '添加书签'}
+                  </button>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="button secondary"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      textDecoration: 'none',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      borderRadius: '6px',
+                      border: '1px solid var(--line)',
+                      background: 'var(--surface)',
+                      color: 'var(--text)',
+                      textAlign: 'center'
+                    }}
+                  >
+                    <ExternalLink size={12} />
+                    访问
+                  </a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummaryReportCard({ cardData }: { cardData: any }) {
+  const categories = cardData?.categories || [];
+  const totalCount = cardData?.totalCount || 0;
+
+  if (categories.length === 0) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>领域分析总结</span>
+        </div>
+        <div className="card-body">
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>未生成领域分析报告。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>书签领域分布分析</span>
+        <span className="folder-pill tag-ent">共 {totalCount} 个书签</span>
+      </div>
+      <div className="card-body">
+        <div className="summary-stats-container">
+          {categories.map((cat: any, idx: number) => (
+            <div key={idx} className="summary-stat-row">
+              <div className="summary-stat-label-row">
+                <span>{cat.name}</span>
+                <span style={{ color: 'var(--muted)' }}>
+                  {cat.count} 个 ({cat.percentage}%)
+                </span>
+              </div>
+              <div className="summary-stat-bar-bg">
+                <div
+                  className="summary-stat-bar-fill"
+                  style={{ width: `${cat.percentage}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }

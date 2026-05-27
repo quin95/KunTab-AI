@@ -16,6 +16,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customBgUrl: '',
   bgBlur: 0,
   bgOpacity: 0,
+  aiProvider: 'none',
+  aiModel: 'gpt-4o-mini',
+  aiApiKey: '',
+  aiBaseUrl: '',
 };
 
 const DEFAULT_FAVORITES: FavoritesState = {

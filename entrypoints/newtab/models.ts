@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'bookmarks' | 'backup' | 'settings';
+export type NavTab = 'home' | 'bookmarks' | 'backup' | 'settings' | 'ai-assistant';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type SearchEngineId = 'google' | 'baidu' | 'bing' | 'github' | 'chatgpt' | 'youtube';
@@ -15,6 +15,10 @@ export interface AppSettings {
   customBgUrl?: string;
   bgBlur?: number;
   bgOpacity?: number;
+  aiProvider: 'none' | 'openai' | 'anthropic';
+  aiModel: string;
+  aiApiKey: string;
+  aiBaseUrl: string;
 }
 
 export interface FavoritesState {
@@ -68,4 +72,13 @@ export interface BackupData {
   tree: BookmarkBackupNode[];
   favorites: string[];
   settings: AppSettings;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  cardType?: 'moves' | 'duplicates' | 'recommendations' | 'summary';
+  cardData?: any;
 }
