@@ -13,6 +13,8 @@ export interface AppSettings {
   fontSize: FontSize;
   language: 'zh-CN' | 'en-US';
   customBgUrl?: string;
+  bgBlur?: number;
+  bgOpacity?: number;
 }
 
 export interface FavoritesState {

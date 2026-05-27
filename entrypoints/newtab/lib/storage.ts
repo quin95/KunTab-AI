@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   fontSize: 'medium',
   language: 'zh-CN',
   customBgUrl: '',
+  bgBlur: 0,
+  bgOpacity: 0,
 };
 
 const DEFAULT_FAVORITES: FavoritesState = {

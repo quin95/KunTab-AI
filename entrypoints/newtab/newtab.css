@@ -2599,3 +2599,167 @@ select:focus {
     flex-shrink: 0;
   }
 }
+
+/* Scenic Background Optimization Overlay Mask */
+.scenic-bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, var(--bg-opacity-val, 0));
+  transition: background-color 0.2s ease;
+}
+
+:root[data-theme='dark'] .scenic-bg-overlay {
+  background-color: rgba(15, 23, 42, var(--bg-opacity-val, 0));
+}
+
+/* Background Control Slider Layout */
+.sub-setting-row {
+  padding-left: 2.75rem !important;
+  border-top: 1px dashed var(--line) !important;
+}
+
+.range-control {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 240px;
+}
+
+.range-control input[type="range"] {
+  flex: 1;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--line);
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.range-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid var(--surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.range-control input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.range-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+/* Bookmarks Tabs & Search Glassmorphic Capsule Styling under Scenic BG */
+.app-shell.has-scenic-bg .bookmark-tabs {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 9999px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: inline-flex;
+  gap: 0.25rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-tabs {
+  background: rgba(30, 41, 59, 0.45);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.app-shell.has-scenic-bg .bookmark-tabs .tab-item {
+  border-radius: 9999px;
+  padding: 0.4rem 1.25rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.app-shell.has-scenic-bg .bookmark-tabs .tab-item::after {
+  display: none;
+}
+
+.app-shell.has-scenic-bg .bookmark-tabs .tab-item:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-tabs .tab-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .bookmark-tabs .tab-item.active {
+  background: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-tabs .tab-item.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Glassmorphism for Bookmarks Cards & Folders under Scenic BG */
+.app-shell.has-scenic-bg .bookmark-card,
+.app-shell.has-scenic-bg .folder-card {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-card,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-card {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.app-shell.has-scenic-bg .bookmark-card:hover,
+.app-shell.has-scenic-bg .folder-card:hover {
+  background: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-card:hover,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-card:hover {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: var(--primary);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Glassmorphic Bookmark Search Input under Scenic BG */
+.app-shell.has-scenic-bg .bookmark-search-wrap {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-search-wrap {
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}

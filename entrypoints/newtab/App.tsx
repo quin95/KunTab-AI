@@ -74,6 +74,8 @@ import {
   Check,
   ExternalLink,
   Image,
+  Sparkles,
+  Sliders,
 } from 'lucide-react';
 import './newtab.css';
 import logoImg from '../../assets/logo.png';
@@ -156,6 +158,10 @@ const LOCALE_TEXT = {
     themeMode: '主题模式',
     customBgUrl: '自定义背景图',
     customBgUrlDesc: '输入背景图片的 URL 地址，清除输入框可恢复默认背景',
+    bgBlur: '背景模糊度',
+    bgBlurDesc: '调整背景图片的模糊程度以提升文本可读性',
+    bgOpacity: '背景遮罩浓度',
+    bgOpacityDesc: '增加半透明遮罩以降低背景干扰，强化内容对比',
     followSystem: '跟随系统',
     compactMode: '紧凑布局',
     fontSize: '字体大小',
@@ -256,6 +262,10 @@ const LOCALE_TEXT = {
     themeMode: 'Theme Mode',
     customBgUrl: 'Custom Background Image',
     customBgUrlDesc: 'Enter a background image URL. Clear to restore default',
+    bgBlur: 'Background Blur',
+    bgBlurDesc: 'Adjust background blur to improve readability of text',
+    bgOpacity: 'Background Mask Opacity',
+    bgOpacityDesc: 'Add a semi-transparent mask to reduce background clutter',
     followSystem: 'System',
     compactMode: 'Compact Layout',
     fontSize: 'Font Size',
@@ -1017,8 +1027,15 @@ export default function App() {
 
         <div
           className="scenic-bg"
-          style={settings.customBgUrl ? { backgroundImage: `url(${settings.customBgUrl})` } : undefined}
-        />
+          style={{
+            ...(settings.customBgUrl ? { backgroundImage: `url(${settings.customBgUrl})` } : {}),
+            filter: settings.bgBlur ? `blur(${settings.bgBlur}px)` : undefined,
+            transform: settings.bgBlur ? 'scale(1.05)' : undefined,
+            ['--bg-opacity-val' as any]: settings.bgOpacity !== undefined ? settings.bgOpacity / 100 : 0,
+          }}
+        >
+          <div className="scenic-bg-overlay" />
+        </div>
 
         {activeTab === 'home' && (
           <section className="home-page">
@@ -1637,6 +1654,48 @@ export default function App() {
                     }
                   }}
                 />
+              </div>
+
+              <div className="settings-row sub-setting-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap" style={{ opacity: 0.6 }}><Sparkles size={16} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.bgBlur}</span>
+                    <span className="setting-desc">{text.bgBlurDesc}</span>
+                  </div>
+                </div>
+                <div className="range-control">
+                  <input
+                    type="range"
+                    min="0"
+                    max="20"
+                    step="1"
+                    value={settings.bgBlur ?? 0}
+                    onChange={(event) => saveSettingsPatch({ bgBlur: Number(event.target.value) })}
+                  />
+                  <span className="range-value">{(settings.bgBlur ?? 0)}px</span>
+                </div>
+              </div>
+
+              <div className="settings-row sub-setting-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap" style={{ opacity: 0.6 }}><Sliders size={16} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.bgOpacity}</span>
+                    <span className="setting-desc">{text.bgOpacityDesc}</span>
+                  </div>
+                </div>
+                <div className="range-control">
+                  <input
+                    type="range"
+                    min="0"
+                    max="80"
+                    step="5"
+                    value={settings.bgOpacity ?? 0}
+                    onChange={(event) => saveSettingsPatch({ bgOpacity: Number(event.target.value) })}
+                  />
+                  <span className="range-value">{(settings.bgOpacity ?? 0)}%</span>
+                </div>
               </div>
 
               <div className="settings-row">
