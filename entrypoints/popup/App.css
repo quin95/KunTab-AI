@@ -41,7 +41,7 @@
 .popup-root {
   width: 380px;
   min-height: 200px;
-  max-height: 480px;
+  max-height: 600px;
   padding: 18px;
   background: var(--bg);
   color: var(--text);
@@ -209,18 +209,16 @@
 }
 
 .search-dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
+  position: relative;
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  max-height: 180px;
+  box-shadow: var(--shadow);
+  max-height: 220px;
   overflow-y: auto;
-  z-index: 100;
-  margin-top: 4px;
+  z-index: 10;
+  margin-top: 6px;
   padding: 4px 0;
   box-sizing: border-box;
 }
