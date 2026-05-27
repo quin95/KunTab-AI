@@ -492,12 +492,88 @@ export default function App() {
 
     const query = bookmarkQuery.trim().toLowerCase();
 
-    // Case 1: Search is active (recursively search pages only)
+    // Case 1: Search is active (recursively search folders and/or webpages depending on subTab)
     if (query) {
-      const searchList = collectBookmarksInFolder(bookmarkTree, selectedFolderId);
-      return searchList
-        .filter((b) => b.title.toLowerCase().includes(query) || b.url.toLowerCase().includes(query))
-        .map((b) => ({ ...b, isFolder: false as const }));
+      let searchRoots: BookmarkNode[] = [];
+      if (selectedFolderId === '0') {
+        searchRoots = bookmarkTree;
+      } else {
+        const findNode = (nodes: BookmarkNode[]): BookmarkNode | null => {
+          for (const n of nodes) {
+            if (n.id === selectedFolderId) return n;
+            if (n.children) {
+              const found = findNode(n.children);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+        const found = findNode(bookmarkTree);
+        if (found) {
+          searchRoots = [found];
+        }
+      }
+
+      const folders: any[] = [];
+      const webpages: FlatBookmark[] = [];
+
+      const walk = (
+        node: BookmarkNode,
+        folderPath: string,
+        folderId: string | undefined,
+        folderName: string,
+        isRootOfSearch: boolean
+      ) => {
+        if (node.url) {
+          const match = node.title?.toLowerCase().includes(query) || node.url.toLowerCase().includes(query);
+          if (match) {
+            webpages.push({
+              id: node.id,
+              parentId: node.parentId,
+              title: node.title || node.url,
+              url: node.url,
+              folderId,
+              folderName,
+              folderPath,
+              dateAdded: node.dateAdded,
+            });
+          }
+          return;
+        }
+
+        const selfName = node.title || (node.id === '0' ? '根目录' : '未命名文件夹');
+        const nextPath = folderPath ? `${folderPath} / ${selfName}` : selfName;
+        const nextFolderId = node.id === '0' ? folderId : node.id;
+
+        if (!isRootOfSearch && node.id !== '0') {
+          const match = selfName.toLowerCase().includes(query);
+          if (match) {
+            folders.push({
+              id: node.id,
+              title: selfName,
+              isFolder: true as const,
+              bookmarkCount: countBookmarksInNode(node),
+            });
+          }
+        }
+
+        for (const child of node.children ?? []) {
+          walk(child, nextPath, nextFolderId, selfName, false);
+        }
+      };
+
+      for (const root of searchRoots) {
+        const parentName = root.id === '0' ? '全部书签' : root.title || '未命名文件夹';
+        walk(root, '', root.id, parentName, true);
+      }
+
+      if (subTab === 'all') {
+        return [...folders, ...webpages.map((w) => ({ ...w, isFolder: false as const }))];
+      } else if (subTab === 'web') {
+        return webpages.map((w) => ({ ...w, isFolder: false as const }));
+      } else if (subTab === 'folder') {
+        return folders;
+      }
     }
 
     // Case 2: Normal display
