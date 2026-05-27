@@ -23,6 +23,19 @@
 
 ---
 
+## 📷 Screenshots
+
+### 🌅 Dashboard
+![Dashboard Preview](assets/screenshots/kuntab-1.png)
+
+### 📂 Bookmarks Manager
+![Bookmarks Manager Preview](assets/screenshots/kuntab-2.png)
+
+### ⚙️ Settings & Backup
+![Settings Preview](assets/screenshots/kuntab-3.png)
+
+---
+
 ## ✨ Key Features
 
 KunTab turns your browser's default New Tab page into an elegant, powerful dashboard centered around bookmark organization and daily utility.

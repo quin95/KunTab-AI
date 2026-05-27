@@ -23,6 +23,19 @@
 
 ---
 
+## 📷 界面截图
+
+### 🌅 仪表盘主页
+![仪表盘主页预览](assets/screenshots/kuntab-1.png)
+
+### 📂 书签树管理器
+![书签树管理器预览](assets/screenshots/kuntab-2.png)
+
+### ⚙️ 个性化设置与备份
+![个性化设置预览](assets/screenshots/kuntab-3.png)
+
+---
+
 ## ✨ 核心特性
 
 KunTab 将浏览器默认的新标签页替换为一个美观且强大的个人仪表盘，专注于书签整理、效率搜索和日常自定义使用。
