@@ -110,10 +110,10 @@ const SEARCH_ENGINE_HOSTS: Record<string, string> = {
 
 const LOCALE_TEXT = {
   'zh-CN': {
-    navHome: '首页',
-    navBookmarks: '书签',
-    navBackup: '备份',
-    navSettings: '设置',
+    navHome: '主页中心',
+    navBookmarks: '书签管理',
+    navBackup: '备份恢复',
+    navSettings: '系统设置',
     theme: '主题',
     light: '浅色',
     dark: '深色',
@@ -212,7 +212,7 @@ const LOCALE_TEXT = {
     sizeLarge: '较大',
     deleteFolder: '删除文件夹',
     more: '更多',
-    navAiAssistant: 'AI 智能助手',
+    navAiAssistant: '智能助理',
     pageAiAssistantDesc: '与 AI 智能助手对话，支持书签分类、去重清理、相关网站推荐以及领域收藏总结',
     aiSettingsTitle: 'AI 助手设置',
     aiProvider: 'AI 服务商',
