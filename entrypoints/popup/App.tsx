@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { getBookmarkTree, buildFolderTree, flattenFolderOptions, createFolder } from '../newtab/lib/bookmarks';
 import { getSettings } from '../newtab/lib/storage';
+import { chat } from '../newtab/lib/ai';
 import type { FolderOption, AppSettings } from '../newtab/models';
-import { Search, Plus, Trash2, Check, Folder, Bookmark, Globe, ChevronDown, ExternalLink, Moon, Sun, Info } from 'lucide-react';
+import { Search, Plus, Trash2, Check, Folder, Bookmark, Globe, ChevronDown, ExternalLink, Moon, Sun, Info, Sparkles } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import './App.css';
 
@@ -28,6 +29,11 @@ const POPUP_LOCALE = {
     folderCreated: '已创建文件夹「{title}」',
     isBookmarked: '已在此处收藏',
     shortcutHint: '快捷键: {key}',
+    aiRecommend: '智能推荐',
+    recommending: '推荐中...',
+    aiNotConfigured: '请先在 KunTab 设置中配置并启用 AI 助手。',
+    recommendSuccess: '推荐成功！已为您选中最佳文件夹。',
+    recommendFailed: '推荐失败，请重试',
   },
   'en-US': {
     quickBookmark: 'Quick Bookmark',
@@ -48,6 +54,11 @@ const POPUP_LOCALE = {
     folderCreated: 'Folder "{title}" created',
     isBookmarked: 'Bookmarked here',
     shortcutHint: 'Shortcut: {key}',
+    aiRecommend: 'AI Suggest',
+    recommending: 'Analyzing...',
+    aiNotConfigured: 'Please configure and enable AI assistant in KunTab settings first.',
+    recommendSuccess: 'Suggested! Selected the best folder for you.',
+    recommendFailed: 'Recommendation failed, please try again',
   }
 };
 
@@ -64,6 +75,8 @@ function App() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [isSuccessState, setIsSuccessState] = useState(false);
+  const [isRecommending, setIsRecommending] = useState(false);
+  const [recommendReason, setRecommendReason] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -199,6 +212,94 @@ function App() {
     }
   };
 
+  const handleAiRecommend = async () => {
+    if (!settings || settings.aiProvider === 'none' || !settings.aiApiKey) {
+      showToast(t.aiNotConfigured);
+      return;
+    }
+    setIsRecommending(true);
+    setRecommendReason(null);
+    try {
+      const folderOptionsList = folderOptions
+        .map((o) => `- ID: ${o.id} | 路径: ${o.label}`)
+        .join('\n');
+
+      const systemPrompt = `你是一个专业的书签整理分类助手。
+你的任务是：根据用户提供的网页标题、链接，从给定的【现有文件夹列表】中，智能分析并选出一个最适合保存该网页的文件夹。
+
+【现有文件夹列表格式】：
+- ID: [文件夹ID] | 路径: [完整层级路径]
+
+【输出规范】：
+请仅输出一个合法的 JSON 代码块，不要包含任何额外的解释文字或 Markdown 标记（除了 JSON 代码块本身）：
+\`\`\`json
+{
+  "folderId": "匹配到的文件夹 ID",
+  "reason": "推荐存入该文件夹的具体原因，不超过30字"
+}
+\`\`\`
+
+【注意事项】：
+1. 必须且只能从【现有文件夹列表】中挑选一个 ID。
+2. 即使没有百分之百相关的文件夹，也请选择一个最接近或最合理的文件夹（例如技术类可放入“开发”或“工具”；日常类可放入“书签栏”等）。
+3. 必须确保 JSON 格式合法，可以被 JSON.parse 正常解析。`;
+
+      const userPrompt = `【待归类网页信息】：
+标题: ${title}
+链接: ${url}
+
+【现有文件夹列表】：
+${folderOptionsList || '- 无'}`;
+
+      const responseText = await chat(settings, [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ]);
+
+      let parsed: { folderId: string; reason: string } | null = null;
+      const blockRegex = /```json\n([\s\S]*?)\n```/;
+      const match = blockRegex.exec(responseText);
+      const jsonStringToParse = match ? match[1].trim() : responseText.trim();
+
+      try {
+        parsed = JSON.parse(jsonStringToParse);
+      } catch (e) {
+        const startIdx = jsonStringToParse.indexOf('{');
+        const endIdx = jsonStringToParse.lastIndexOf('}');
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          try {
+            parsed = JSON.parse(jsonStringToParse.substring(startIdx, endIdx + 1));
+          } catch (err2) {
+            console.error('Failed to parse JSON using braces fallback', err2);
+          }
+        }
+      }
+
+      if (parsed && parsed.folderId) {
+        const recommendedId = String(parsed.folderId);
+        const exists = folderOptions.some((o) => String(o.id) === recommendedId) || recommendedId === '0' || recommendedId === '1';
+        if (exists) {
+          setParentId(recommendedId);
+          setRecommendReason(parsed.reason || '');
+          showToast(t.recommendSuccess);
+        } else {
+          const hasBar = folderOptions.find((o) => o.id === '1');
+          const fallbackId = hasBar ? '1' : (folderOptions[0]?.id || '1');
+          setParentId(fallbackId);
+          setRecommendReason(parsed.reason || '');
+          showToast(t.recommendSuccess);
+        }
+      } else {
+        throw new Error('Could not parse folder ID or reason from AI response');
+      }
+    } catch (err) {
+      console.error('AI Recommendation failed:', err);
+      showToast(t.recommendFailed);
+    } finally {
+      setIsRecommending(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !url.trim()) {
@@ -299,7 +400,19 @@ function App() {
           </div>
 
           <div className="form-field select-field" ref={dropdownRef}>
-            <label className="field-label">{t.folder}</label>
+            <div className="field-label-row">
+              <label className="field-label">{t.folder}</label>
+              <button
+                type="button"
+                className="ai-recommend-btn"
+                onClick={handleAiRecommend}
+                disabled={isRecommending}
+                title={t.aiRecommend}
+              >
+                <Sparkles size={12} className={isRecommending ? 'spinning' : ''} />
+                <span>{isRecommending ? t.recommending : t.aiRecommend}</span>
+              </button>
+            </div>
             <div className="search-select-container">
               <div className="input-with-icon">
                 <Folder size={16} className="folder-icon-input" />
@@ -355,6 +468,11 @@ function App() {
                 </div>
               )}
             </div>
+            {recommendReason && (
+              <div className="recommend-reason-box">
+                <span>✨ {lang === 'zh-CN' ? 'AI 建议存入该文件夹：' : 'AI suggests saving here: '}{recommendReason}</span>
+              </div>
+            )}
           </div>
 
           {isBookmarked && (
