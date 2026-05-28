@@ -227,6 +227,12 @@ const LOCALE_TEXT = {
     aiTestSuccess: '连接成功',
     aiTestFailed: '连接失败',
     aiSettingsNotice: '支持任何 OpenAI 兼容的 API 中转（如 DeepSeek/Kimi/Ollama 等）。所有的请求均在本地发送，不会向我们的服务器上传您的任何密钥或书签数据。',
+    checkUpdate: '检查更新',
+    checkingUpdate: '正在检查更新...',
+    updateAvailable: '发现新版本: v{version}',
+    updateUpToDate: '当前已是最新版本',
+    updateFailed: '检查更新失败，请稍后重试',
+    clickToUpdate: '去 GitHub 下载更新',
   },
   'en-US': {
     navHome: 'Home',
@@ -346,6 +352,12 @@ const LOCALE_TEXT = {
     aiTestSuccess: 'Connected',
     aiTestFailed: 'Connection Failed',
     aiSettingsNotice: 'Supports any OpenAI-compatible API endpoints (e.g. DeepSeek, Kimi, Ollama). All requests are sent directly from your browser. Your keys and bookmarks are never uploaded to our servers.',
+    checkUpdate: 'Check for Updates',
+    checkingUpdate: 'Checking for updates...',
+    updateAvailable: 'New version available: v{version}',
+    updateUpToDate: 'You are on the latest version',
+    updateFailed: 'Failed to check for updates',
+    clickToUpdate: 'Go to GitHub to update',
   },
 } as const;
 
@@ -421,6 +433,12 @@ export default function App() {
   const [duplicateSelections, setDuplicateSelections] = useState<Record<string, string[]>>({});
   const [compareTreeExpanded, setCompareTreeExpanded] = useState<Record<string, boolean>>({});
 
+  // Update Checker State
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [hasUpdate, setHasUpdate] = useState(false);
+  const [latestVersion, setLatestVersion] = useState('');
+  const [updateUrl, setUpdateUrl] = useState('https://github.com/chaokunwork/KunTab-AI/releases');
+
   const toggleCompareFolder = (id: string) => {
     setCompareTreeExpanded((prev) => ({
       ...prev,
@@ -493,6 +511,64 @@ export default function App() {
     }
   };
 
+  const checkUpdate = async (manual = false) => {
+    if (manual) {
+      setCheckingUpdate(true);
+    }
+    try {
+      const response = await fetch('https://api.github.com/repos/chaokunwork/KunTab-AI/releases/latest');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      const data = await response.json();
+      const rawTag = data.tag_name || '';
+      const versionOnly = rawTag.replace(/^v/, '');
+      if (versionOnly) {
+        setLatestVersion(versionOnly);
+        if (data.html_url) {
+          setUpdateUrl(data.html_url);
+        }
+        
+        // Compare versionOnly with extensionVersion
+        const parts1 = versionOnly.split('.').map(Number);
+        const parts2 = extensionVersion.split('.').map(Number);
+        let isNewer = false;
+        for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+          const p1 = parts1[i] || 0;
+          const p2 = parts2[i] || 0;
+          if (p1 > p2) {
+            isNewer = true;
+            break;
+          }
+          if (p1 < p2) {
+            break;
+          }
+        }
+
+        if (isNewer) {
+          setHasUpdate(true);
+          if (manual) {
+            showToast(fmt(text.updateAvailable, { version: versionOnly }));
+          }
+        } else {
+          setHasUpdate(false);
+          if (manual) {
+            showToast(text.updateUpToDate);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Check update failed:', err);
+      if (manual) {
+        showToast(text.updateFailed);
+      }
+    } finally {
+      if (manual) {
+        setCheckingUpdate(false);
+      }
+    }
+  };
+
   // Reset pagination on folder/search/subTab change
   useEffect(() => {
     setCurrentPage(1);
@@ -507,6 +583,7 @@ export default function App() {
   useEffect(() => {
     reloadBookmarks();
     reloadStorage();
+    checkUpdate(false);
 
     const offBookmark = watchBookmarkChanges(() => {
       reloadBookmarks();
@@ -1413,6 +1490,9 @@ ${serializedContext}
               >
                 <Icon className="nav-item-icon" size={18} />
                 <span>{item.label}</span>
+                {hasUpdate && item.tab === 'settings' && (
+                  <span className="nav-update-dot" />
+                )}
               </button>
             );
           })}
@@ -2446,27 +2526,48 @@ ${serializedContext}
                   {text.clearData}
                 </button>
               </div>
-              <div className="settings-row">
+              <div
+                className={`settings-row clickable ${hasUpdate ? 'update-available' : ''}`}
+                onClick={() => {
+                  if (hasUpdate) {
+                    openUrl(updateUrl);
+                  } else {
+                    checkUpdate(true);
+                  }
+                }}
+              >
                 <div className="setting-left">
-                  <div className="setting-icon-wrap"><Info size={18} /></div>
+                  <div className="setting-icon-wrap">
+                    {hasUpdate ? <ArrowUp size={18} className="text-primary animate-bounce" /> : <Info size={18} />}
+                  </div>
                   <div className="setting-meta">
-                    <span className="setting-title">{text.about}</span>
-                    <span className="setting-desc">版本号与相关说明</span>
+                    <span className="setting-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {text.about}
+                      {hasUpdate && <span className="update-dot-indicator" />}
+                    </span>
+                    <span className="setting-desc">
+                      {hasUpdate ? fmt(text.updateAvailable, { version: latestVersion }) : '检查最新版本与更新说明'}
+                    </span>
                   </div>
                 </div>
                 <div className="about-row-right">
-                  <span>{text.currentVersion}</span>
+                  {checkingUpdate ? (
+                    <span className="checking-text" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Loader2 size={14} className="animate-spin" />
+                      {text.checkingUpdate}
+                    </span>
+                  ) : hasUpdate ? (
+                    <span className="update-link" style={{ color: 'var(--primary)', fontWeight: 'bold' }}>
+                      {text.clickToUpdate}
+                    </span>
+                  ) : (
+                    <span>{text.currentVersion}</span>
+                  )}
                   <ChevronRight size={16} />
                 </div>
               </div>
             </article>
 
-            <div className="settings-feedback-footer">
-              <span>有任何问题或建议？欢迎通过反馈与我们联系</span>
-              <a href="#feedback">
-                反馈建议 <ExternalLink size={12} style={{ display: 'inline', verticalAlign: 'middle', marginLeft: '2px' }} />
-              </a>
-            </div>
           </section>
         )}
       </main>
