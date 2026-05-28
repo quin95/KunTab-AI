@@ -1337,14 +1337,30 @@ ${serializedContext}
 
   const onAddRecommendedBookmark = async (title: string, url: string, tag: string) => {
     try {
-      const parentId = folderOptions[0]?.id || '1';
+      const defaultParentId = folderOptions[0]?.id || '1';
+      const targetFolder = folderOptions.find(
+        (f) => f.label === '智能推荐' || f.label.endsWith(' / 智能推荐')
+      );
+      
+      let targetFolderId = targetFolder?.id;
+      
+      if (!targetFolderId) {
+        const createdFolder = await createFolder(defaultParentId, '智能推荐');
+        if (createdFolder) {
+          targetFolderId = createdFolder.id;
+          await reloadBookmarks();
+        } else {
+          targetFolderId = defaultParentId;
+        }
+      }
+
       await ext.bookmarks.create({
-        parentId,
+        parentId: targetFolderId,
         title,
         url,
       });
       await reloadBookmarks();
-      showToast(`已收藏推荐网站「${title}」`);
+      showToast(`已成功保存至「智能推荐」文件夹`);
     } catch (err) {
       alert('添加书签失败，请确认书签 API 权限。');
     }
@@ -1691,14 +1707,7 @@ ${serializedContext}
                       >
                         <div className="bookmark-card-top">
                           <div className="bookmark-card-favicon-wrap">
-                            <img
-                              src={faviconOf(item.url)}
-                              alt=""
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
-                              }}
-                            />
+                            <BookmarkFavicon url={item.url} size={24} />
                           </div>
                           <div className="bookmark-card-actions-wrap" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -2525,7 +2534,7 @@ ${serializedContext}
                       setFavoriteSearch('');
                     }}
                   >
-                    <img src={faviconOf(bookmark.url)} alt="" />
+                    <BookmarkFavicon url={bookmark.url} size={16} />
                     <span className="picker-title">{bookmark.title}</span>
                     <small>{bookmark.folderName}</small>
                   </button>
@@ -2582,7 +2591,7 @@ ${serializedContext}
                         openUrl(item.url);
                       }}
                     >
-                      <img src={faviconOf(item.url)} alt="" className="recent-modal-favicon" />
+                      <BookmarkFavicon url={item.url} size={20} className="recent-modal-favicon" />
                       <div className="recent-modal-info">
                         <strong title={item.title}>{item.title}</strong>
                         <small title={item.url}>{hostnameOf(item.url)}</small>
@@ -2711,14 +2720,10 @@ function CompareTreeNode({
       return <Folder size={14} className="tree-folder-icon" />;
     }
     return (
-      <img
-        src={faviconOf(node.url || '')}
-        alt=""
+      <BookmarkFavicon
+        url={node.url || ''}
         className="tree-bookmark-favicon"
-        onError={(e) => {
-          (e.target as HTMLImageElement).src =
-            'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
-        }}
+        size={14}
       />
     );
   };
@@ -3233,14 +3238,11 @@ function RecommendationsCard({
             return (
               <div key={idx} className="rec-item-card">
                 <div className="rec-item-header">
-                  <img
-                    src={faviconOf(item.url)}
-                    alt=""
+                  <BookmarkFavicon
+                    url={item.url}
                     className="rec-item-icon"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>';
-                    }}
+                    size={24}
+                    preferOnline={true}
                   />
                   <div className="rec-item-title-wrap">
                     <div className="rec-item-title" title={item.title}>
@@ -3347,5 +3349,91 @@ function SummaryReportCard({ cardData }: { cardData: any }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function BookmarkFavicon({
+  url,
+  className,
+  size = 32,
+  preferOnline = false,
+}: {
+  url: string;
+  className?: string;
+  size?: number;
+  preferOnline?: boolean;
+}) {
+  const getInitialSrc = () => {
+    if (preferOnline) {
+      try {
+        const hostname = new URL(url).hostname;
+        return `https://api.iowen.cn/favicon/${hostname}.png`;
+      } catch {
+        return faviconOf(url, size);
+      }
+    }
+    return faviconOf(url, size);
+  };
+
+  const [src, setSrc] = useState(getInitialSrc);
+  const [fallbackPhase, setFallbackPhase] = useState(preferOnline ? 1 : 0); // 0: local, 1: iowen, 2: google, 3: svg
+
+  useEffect(() => {
+    setSrc(getInitialSrc());
+    setFallbackPhase(preferOnline ? 1 : 0);
+  }, [url, size, preferOnline]);
+
+  const handleOnError = () => {
+    if (fallbackPhase === 0) {
+      setFallbackPhase(1);
+      try {
+        const hostname = new URL(url).hostname;
+        setSrc(`https://api.iowen.cn/favicon/${hostname}.png`);
+      } catch {
+        setFallbackPhase(2);
+      }
+    } else if (fallbackPhase === 1) {
+      setFallbackPhase(2);
+      try {
+        const hostname = new URL(url).hostname;
+        setSrc(`https://www.google.com/s2/favicons?domain=${hostname}&sz=${size}`);
+      } catch {
+        setFallbackPhase(3);
+      }
+    } else if (fallbackPhase === 2) {
+      setFallbackPhase(3);
+    }
+  };
+
+  if (fallbackPhase === 3) {
+    return (
+      <svg
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#64748b"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: size, height: size, flexShrink: 0 }}
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+        <path d="M2 12h20" />
+      </svg>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className={className}
+      onError={handleOnError}
+      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
+    />
   );
 }
