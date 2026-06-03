@@ -1,4 +1,4 @@
-import type { AppSettings, BackupData, BookmarkBackupNode, FavoritesState } from '../models';
+import type { AppSettings, BackupData, BookmarkBackupNode, FavoritesState, FlatBookmark } from '../models';
 import { type BookmarkNode, flattenBookmarks, getBookmarkTree } from './bookmarks';
 import { downloadTextFile, ensureHttpUrl } from './utils';
 import { replaceFromBackup } from './storage';
@@ -18,13 +18,21 @@ function toBackupNode(node: BookmarkNode): BookmarkBackupNode {
 export async function buildBackup(settings: AppSettings, favorites: FavoritesState): Promise<BackupData> {
   const tree = await getBookmarkTree();
   const topLevel = tree[0]?.children ?? tree;
+  const bookmarkById = new Map(flattenBookmarks(tree).map((bookmark) => [bookmark.id, bookmark]));
+  const favoriteSites = favorites.favorites
+    .map((id) => bookmarkById.get(id))
+    .filter((bookmark): bookmark is FlatBookmark => Boolean(bookmark))
+    .map((bookmark) => ({
+      title: bookmark.title,
+      url: bookmark.url,
+    }));
 
   return {
-    app: 'kuntab' as any,
-    version: 1,
+    app: 'kuntab',
+    version: 2,
     exportedAt: Date.now(),
     tree: topLevel.map(toBackupNode),
-    favorites: favorites.favorites,
+    favoriteSites,
     settings,
   };
 }
@@ -94,14 +102,16 @@ export function downloadHtmlBackup(backup: BackupData) {
 
 export function parseBackupJson(content: string): BackupData {
   const parsed = JSON.parse(content) as BackupData & { app?: string };
-  const appOk = parsed?.app === 'kuntab' || parsed?.app === 'bookmark-ai';
-  if (!parsed || !appOk || parsed.version !== 1 || !Array.isArray(parsed.tree)) {
+  if (
+    !parsed ||
+    parsed.app !== 'kuntab' ||
+    parsed.version !== 2 ||
+    !Array.isArray(parsed.tree) ||
+    !Array.isArray(parsed.favoriteSites)
+  ) {
     throw new Error('无效的备份文件');
   }
-  return {
-    ...parsed,
-    app: 'kuntab',
-  };
+  return parsed;
 }
 
 function normalizeUrl(raw: string): string {
@@ -167,6 +177,34 @@ export async function importBackupTree(
 
   await walk(tree, rootFolderId);
   return { added, skipped };
+}
+
+export async function resolveBackupFavorites(backup: BackupData): Promise<FavoritesState> {
+  const tree = await getBookmarkTree();
+  const flat = flattenBookmarks(tree);
+  const bookmarkByUrl = new Map<string, FlatBookmark>();
+
+  for (const bookmark of flat) {
+    const normalized = normalizeUrl(bookmark.url);
+    if (!bookmarkByUrl.has(normalized)) {
+      bookmarkByUrl.set(normalized, bookmark);
+    }
+  }
+
+  const nextFavorites: string[] = [];
+  const seen = new Set<string>();
+
+  const addFavoriteId = (id?: string) => {
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    nextFavorites.push(id);
+  };
+
+  for (const site of backup.favoriteSites) {
+    addFavoriteId(bookmarkByUrl.get(normalizeUrl(site.url))?.id);
+  }
+
+  return { favorites: nextFavorites };
 }
 
 export async function applyBackupConfig(settings: AppSettings, favorites: FavoritesState): Promise<void> {

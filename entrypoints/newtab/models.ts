@@ -25,6 +25,11 @@ export interface FavoritesState {
   favorites: string[];
 }
 
+export interface BackupFavoriteSite {
+  title: string;
+  url: string;
+}
+
 export interface RecentOpenItem {
   id: string;
   title: string;
@@ -67,10 +72,10 @@ export interface BookmarkBackupNode {
 
 export interface BackupData {
   app: 'kuntab';
-  version: 1;
+  version: 2;
   exportedAt: number;
   tree: BookmarkBackupNode[];
-  favorites: string[];
+  favoriteSites: BackupFavoriteSite[];
   settings: AppSettings;
 }
 

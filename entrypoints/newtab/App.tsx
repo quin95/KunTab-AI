@@ -42,6 +42,7 @@ import {
   downloadJsonBackup,
   importBackupTree,
   parseBackupJson,
+  resolveBackupFavorites,
 } from './lib/backup';
 import { getEngineById, parseSearchCommand, SEARCH_ENGINES } from './lib/search';
 import { faviconOf, formatDateTime, formatRelativeTime, greetingByTime, hostnameOf } from './lib/utils';
@@ -1078,7 +1079,8 @@ export default function App() {
       const backup: BackupData = parseBackupJson(content);
 
       const { added, skipped } = await importBackupTree(backupFolderId, backup.tree);
-      await applyBackupConfig(backup.settings, { favorites: backup.favorites || [] });
+      const restoredFavorites = await resolveBackupFavorites(backup);
+      await applyBackupConfig(backup.settings, restoredFavorites);
       await reloadStorage();
       showToast(fmt(text.importDone, { added, skipped }));
     } catch (error) {
