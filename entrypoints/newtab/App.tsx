@@ -438,7 +438,7 @@ export default function App() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState('');
-  const [updateUrl, setUpdateUrl] = useState('https://github.com/chaokunwork/KunTab-AI/releases');
+  const [updateUrl, setUpdateUrl] = useState('https://github.com/quin95/KunTab-AI/releases');
 
   const toggleCompareFolder = (id: string) => {
     setCompareTreeExpanded((prev) => ({
@@ -517,7 +517,7 @@ export default function App() {
       setCheckingUpdate(true);
     }
     try {
-      const response = await fetch('https://api.github.com/repos/chaokunwork/KunTab-AI/releases/latest');
+      const response = await fetch('https://api.github.com/repos/quin95/KunTab-AI/releases/latest');
       if (!response.ok) {
         throw new Error('Network response was not ok');
       }
@@ -1512,7 +1512,7 @@ ${serializedContext}
           </button>
           <button 
             className="github-link-btn"
-            onClick={() => openUrl('https://github.com/chaokunwork/KunTab-AI')}
+            onClick={() => openUrl('https://github.com/quin95/KunTab-AI')}
             title="GitHub 仓库"
           >
             <svg

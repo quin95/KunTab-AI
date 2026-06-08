@@ -116,8 +116,8 @@ KunTab turns your browser's default New Tab page into an elegant, powerful dashb
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-username/kuntab.git
-   cd kuntab
+   git clone https://github.com/quin95/KunTab-AI.git
+   cd KunTab-AI
    ```
 
 2. **Install dependencies**:
