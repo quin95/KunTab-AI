@@ -10,7 +10,15 @@ export interface BookmarkNode {
   children?: BookmarkNode[];
 }
 
+export interface EmptyFolderInfo {
+  id: string;
+  parentId?: string;
+  title: string;
+  path: string;
+}
+
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
+const PROTECTED_FOLDER_IDS = new Set(['0', '1', '2', '3']);
 
 function hasBookmarksApi() {
   return !!ext?.bookmarks;
@@ -42,6 +50,11 @@ export async function deleteBookmark(id: string): Promise<void> {
 export async function deleteFolderTree(id: string): Promise<void> {
   if (!hasBookmarksApi()) return;
   await ext.bookmarks.removeTree(id);
+}
+
+export async function deleteEmptyFolder(id: string): Promise<void> {
+  if (!hasBookmarksApi()) return;
+  await ext.bookmarks.remove(id);
 }
 
 export async function moveBookmark(
@@ -139,6 +152,37 @@ export function flattenFolderOptions(folderTree: FolderNode[]): FolderOption[] {
 
   for (const folder of folderTree) {
     walk(folder);
+  }
+
+  return out;
+}
+
+export function findEmptyBookmarkFolders(nodes: BookmarkNode[]): EmptyFolderInfo[] {
+  const out: EmptyFolderInfo[] = [];
+
+  const walk = (node: BookmarkNode, parentPath = '') => {
+    if (node.url) return;
+
+    const title = node.title || (node.id === '0' ? '全部书签' : '未命名文件夹');
+    const path = node.id === '0' ? '全部书签' : parentPath ? `${parentPath} / ${title}` : title;
+    const children = node.children ?? [];
+
+    if (!PROTECTED_FOLDER_IDS.has(node.id) && children.length === 0) {
+      out.push({
+        id: node.id,
+        parentId: node.parentId,
+        title,
+        path,
+      });
+    }
+
+    for (const child of children) {
+      walk(child, path);
+    }
+  };
+
+  for (const root of nodes) {
+    walk(root);
   }
 
   return out;

@@ -27,13 +27,16 @@ import {
   collectBookmarksInFolder,
   createFolder,
   deleteBookmark,
+  deleteEmptyFolder,
   deleteFolderTree,
+  findEmptyBookmarkFolders,
   flattenBookmarks,
   flattenFolderOptions,
   getBookmarkTree,
   moveBookmark,
   updateBookmark,
   watchBookmarkChanges,
+  type EmptyFolderInfo,
 } from './lib/bookmarks';
 import {
   applyBackupConfig,
@@ -54,6 +57,8 @@ import {
   Clock,
   Cog,
   Folder,
+  FolderSearch,
+  FolderX,
   FolderPlus,
   Globe,
   Grid3X3,
@@ -212,6 +217,17 @@ const LOCALE_TEXT = {
     sizeMedium: '中等（默认）',
     sizeLarge: '较大',
     deleteFolder: '删除文件夹',
+    emptyFolderScan: '检测空文件夹',
+    emptyFolderScanning: '检测中...',
+    emptyFolderFound: '发现 {count} 个空文件夹',
+    emptyFolderNone: '未发现空文件夹',
+    emptyFolderDelete: '删除',
+    emptyFolderDeleteAll: '全部删除',
+    emptyFolderConfirmDelete: '确认删除空文件夹「{title}」吗？',
+    emptyFolderConfirmDeleteAll: '确认删除当前检测到的 {count} 个空文件夹吗？',
+    emptyFolderDeleted: '已删除空文件夹：{title}',
+    emptyFoldersDeleted: '已删除 {count} 个空文件夹',
+    emptyFolderDeleteFailed: '空文件夹删除失败，请重新检测后再试',
     more: '更多',
     navAiAssistant: '智能助理',
     pageAiAssistantDesc: '与 AI 智能助手对话，支持书签分类、去重清理、相关网站推荐以及领域收藏总结',
@@ -337,6 +353,17 @@ const LOCALE_TEXT = {
     sizeMedium: 'Medium',
     sizeLarge: 'Large',
     deleteFolder: 'Delete folder',
+    emptyFolderScan: 'Find empty folders',
+    emptyFolderScanning: 'Scanning...',
+    emptyFolderFound: 'Found {count} empty folders',
+    emptyFolderNone: 'No empty folders found',
+    emptyFolderDelete: 'Delete',
+    emptyFolderDeleteAll: 'Delete all',
+    emptyFolderConfirmDelete: 'Delete empty folder "{title}"?',
+    emptyFolderConfirmDeleteAll: 'Delete all {count} detected empty folders?',
+    emptyFolderDeleted: 'Deleted empty folder: {title}',
+    emptyFoldersDeleted: 'Deleted {count} empty folders',
+    emptyFolderDeleteFailed: 'Failed to delete empty folder. Please scan again and retry',
     more: 'More',
     navAiAssistant: 'AI Assistant',
     pageAiAssistantDesc: 'Chat with AI Assistant to categorize bookmarks, clean duplicates, recommend sites, or summarize interests',
@@ -433,6 +460,8 @@ export default function App() {
   const [cardSuccessMessage, setCardSuccessMessage] = useState<Record<string, string>>({});
   const [duplicateSelections, setDuplicateSelections] = useState<Record<string, string[]>>({});
   const [compareTreeExpanded, setCompareTreeExpanded] = useState<Record<string, boolean>>({});
+  const [scanningEmptyFolders, setScanningEmptyFolders] = useState(false);
+  const [deletingEmptyFolderId, setDeletingEmptyFolderId] = useState<string | null>(null);
 
   // Update Checker State
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -493,6 +522,8 @@ export default function App() {
     if (!backupFolderId && options[0]?.id) {
       setBackupFolderId(options[0].id);
     }
+
+    return tree;
   };
 
   const reloadStorage = async () => {
@@ -1108,6 +1139,106 @@ export default function App() {
     await clearAppCache();
     await reloadStorage();
     showToast(text.clearedCache);
+  };
+
+  const buildEmptyFolderReply = (count: number) => {
+    if (count === 0) {
+      return '我检查了一遍当前书签树，没有发现空文件夹。';
+    }
+    return `我检查了一遍当前书签树，发现 ${count} 个空文件夹。你可以逐个删除，也可以一次性清理全部。`;
+  };
+
+  const updateEmptyFolderMessage = (messageId: string, folders: EmptyFolderInfo[]) => {
+    setChatMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              content: buildEmptyFolderReply(folders.length),
+              cardType: 'emptyFolders',
+              cardData: { folders },
+            }
+          : msg
+      )
+    );
+  };
+
+  const onScanEmptyFolders = async () => {
+    const startedAt = Date.now();
+    const userMsg: ChatMessage = {
+      id: `user-empty-folders-${startedAt}`,
+      role: 'user',
+      content: text.emptyFolderScan,
+      timestamp: startedAt,
+    };
+    const assistantMsgId = `assistant-empty-folders-${startedAt}`;
+    const assistantMsg: ChatMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '我来检查一下当前书签树里的空文件夹...',
+      timestamp: startedAt + 1,
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, assistantMsg]);
+    setScanningEmptyFolders(true);
+    try {
+      const tree = await getBookmarkTree();
+      const emptyFolders = findEmptyBookmarkFolders(tree);
+      updateEmptyFolderMessage(assistantMsgId, emptyFolders);
+    } catch (err) {
+      console.error('Scan empty bookmark folders failed:', err);
+      setChatMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMsgId
+            ? { ...msg, content: `检测空文件夹时出错：${err instanceof Error ? err.message : String(err)}` }
+            : msg
+        )
+      );
+      showToast(text.emptyFolderDeleteFailed);
+    } finally {
+      setScanningEmptyFolders(false);
+    }
+  };
+
+  const onDeleteEmptyFolder = async (folder: EmptyFolderInfo, messageId: string) => {
+    if (!window.confirm(fmt(text.emptyFolderConfirmDelete, { title: folder.title }))) return;
+
+    setDeletingEmptyFolderId(folder.id);
+    try {
+      await deleteEmptyFolder(folder.id);
+      const tree = await reloadBookmarks();
+      updateEmptyFolderMessage(messageId, findEmptyBookmarkFolders(tree));
+      showToast(fmt(text.emptyFolderDeleted, { title: folder.title }));
+    } catch (err) {
+      console.error('Delete empty bookmark folder failed:', err);
+      showToast(text.emptyFolderDeleteFailed);
+    } finally {
+      setDeletingEmptyFolderId(null);
+    }
+  };
+
+  const onDeleteAllEmptyFolders = async (folders: EmptyFolderInfo[], messageId: string) => {
+    if (folders.length === 0) return;
+    if (!window.confirm(fmt(text.emptyFolderConfirmDeleteAll, { count: folders.length }))) return;
+
+    setDeletingEmptyFolderId('__all__');
+    let deletedCount = 0;
+    try {
+      for (const folder of folders) {
+        try {
+          await deleteEmptyFolder(folder.id);
+          deletedCount += 1;
+        } catch (err) {
+          console.warn(`Delete empty bookmark folder failed: ID=${folder.id}`, err);
+        }
+      }
+
+      const tree = await reloadBookmarks();
+      updateEmptyFolderMessage(messageId, findEmptyBookmarkFolders(tree));
+      showToast(fmt(text.emptyFoldersDeleted, { count: deletedCount }));
+    } finally {
+      setDeletingEmptyFolderId(null);
+    }
   };
 
   const onTestAiConnection = async () => {
@@ -2104,6 +2235,16 @@ ${serializedContext}
                           cardData={msg.cardData}
                         />
                       )}
+
+                      {msg.cardType === 'emptyFolders' && (
+                        <EmptyFolderCleanCard
+                          cardData={msg.cardData}
+                          messageId={msg.id}
+                          deletingEmptyFolderId={deletingEmptyFolderId}
+                          onDeleteEmptyFolder={onDeleteEmptyFolder}
+                          onDeleteAllEmptyFolders={onDeleteAllEmptyFolders}
+                        />
+                      )}
                     </div>
                   </div>
                 );
@@ -2147,6 +2288,18 @@ ${serializedContext}
                     >
                       <Sliders size={16} style={{ color: '#f59e0b' }} />
                       <span>总结我最常收藏的领域</span>
+                    </button>
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={onScanEmptyFolders}
+                      disabled={scanningEmptyFolders || Boolean(deletingEmptyFolderId)}
+                    >
+                      {scanningEmptyFolders ? (
+                        <Loader2 size={16} className="spin" style={{ color: 'var(--primary)' }} />
+                      ) : (
+                        <FolderSearch size={16} style={{ color: 'var(--primary)' }} />
+                      )}
+                      <span>{scanningEmptyFolders ? text.emptyFolderScanning : text.emptyFolderScan}</span>
                     </button>
                   </div>
                 </div>
@@ -3314,6 +3467,83 @@ function DuplicateCleanCard({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function EmptyFolderCleanCard({
+  cardData,
+  messageId,
+  deletingEmptyFolderId,
+  onDeleteEmptyFolder,
+  onDeleteAllEmptyFolders,
+}: {
+  cardData: { folders?: EmptyFolderInfo[] };
+  messageId: string;
+  deletingEmptyFolderId: string | null;
+  onDeleteEmptyFolder: (folder: EmptyFolderInfo, messageId: string) => Promise<void>;
+  onDeleteAllEmptyFolders: (folders: EmptyFolderInfo[], messageId: string) => Promise<void>;
+}) {
+  const folders = cardData?.folders || [];
+  const isDeletingAll = deletingEmptyFolderId === '__all__';
+
+  if (folders.length === 0) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>空文件夹检测</span>
+          <span className="folder-pill tag-tool">无需清理</span>
+        </div>
+        <div className="card-body">
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>当前没有可删除的空文件夹。</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>空文件夹检测</span>
+        <span className="folder-pill tag-tool">共发现 {folders.length} 个空文件夹</span>
+      </div>
+      <div className="card-body" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+        <div className="empty-folder-panel">
+          {folders.map((folder) => (
+            <div key={folder.id} className="empty-folder-row">
+              <div className="empty-folder-main">
+                <FolderX size={16} />
+                <div className="empty-folder-text">
+                  <strong>{folder.title}</strong>
+                  <small>{folder.path}</small>
+                </div>
+              </div>
+              <button
+                className="empty-folder-delete-btn"
+                onClick={() => onDeleteEmptyFolder(folder, messageId)}
+                disabled={isDeletingAll || deletingEmptyFolderId === folder.id}
+              >
+                {deletingEmptyFolderId === folder.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                <span>删除</span>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="card-footer">
+        <span style={{ fontSize: '0.8rem', color: 'var(--muted)', alignSelf: 'center', marginRight: 'auto' }}>
+          删除前会再次由浏览器确认，非空文件夹不会被删除
+        </span>
+        <button
+          className="primary stop"
+          disabled={Boolean(deletingEmptyFolderId)}
+          onClick={() => onDeleteAllEmptyFolders(folders, messageId)}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--danger)', color: 'white' }}
+        >
+          {isDeletingAll ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
+          {isDeletingAll ? '正在删除...' : '全部删除'}
+        </button>
+      </div>
     </div>
   );
 }

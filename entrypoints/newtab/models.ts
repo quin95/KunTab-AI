@@ -84,6 +84,6 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  cardType?: 'moves' | 'duplicates' | 'recommendations' | 'summary';
+  cardType?: 'moves' | 'duplicates' | 'recommendations' | 'summary' | 'emptyFolders';
   cardData?: any;
 }
