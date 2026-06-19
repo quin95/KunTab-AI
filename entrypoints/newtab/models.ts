@@ -25,6 +25,43 @@ export interface FavoritesState {
   favorites: string[];
 }
 
+export interface CloudSyncSettings {
+  endpoint: string;
+  bucket: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  keyPrefix: string;
+}
+
+export interface CloudSyncMetadata {
+  deviceId: string;
+  localVersion: number;
+  localUpdatedAt: number;
+  lastSyncedLocalVersion: number;
+  lastRemoteVersion: number;
+}
+
+export interface CloudSyncFavoriteSite {
+  title: string;
+  url: string;
+}
+
+export interface CloudSyncData {
+  settings: AppSettings;
+  favoriteSites: CloudSyncFavoriteSite[];
+}
+
+export interface CloudSyncPayload {
+  app: 'kuntab';
+  schemaVersion: 1;
+  remoteVersion: number;
+  updatedAt: number;
+  updatedByDeviceId: string;
+  data: CloudSyncData;
+}
+
+export type CloudSyncConflictChoice = 'remote' | 'local' | 'cancel';
+
 export interface BackupFavoriteSite {
   title: string;
   url: string;
