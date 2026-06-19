@@ -68,8 +68,9 @@ import { faviconOf, formatDateTime, formatRelativeTime, greetingByTime, hostname
 import {
   Bell,
   Bookmark,
+  Download,
+  Upload,
   CircleArrowDown,
-  CircleArrowUp,
   Clock,
   Cog,
   Folder,
@@ -175,8 +176,14 @@ const LOCALE_TEXT = {
     backupTip1: '包含所有文件夹和书签',
     backupTip2: '包含常用书签配置和设置项',
     backupTip3: '可用于备份或迁移到其他浏览器',
+    localBackupTitle: '本地备份',
+    localBackupDesc: '导出 JSON 文件离线保存，或从备份文件恢复到指定书签文件夹。',
+    cloudBackupTitle: '云端备份',
     cloudSyncTitle: '云同步',
-    cloudSyncDesc: '使用 R2/S3 兼容存储同步 KunTab 设置和常用书签',
+    cloudSyncDesc: '手动同步 KunTab 设置和常用书签配置到 R2/S3 存储，不同步 Chrome 书签树',
+    cloudSyncTip1: '点击后才会连接云端存储',
+    cloudSyncTip2: '同步设置和常用书签配置',
+    cloudSyncTip3: '多设备冲突时可选择本地或远端',
     cloudSyncNow: '立即同步',
     cloudSyncing: '同步中...',
     cloudSyncTestConnection: '测试连接',
@@ -208,7 +215,7 @@ const LOCALE_TEXT = {
     chooseJson: '选择 JSON 文件',
     importing: '导入中...',
     importLimit: '支持 .json 格式文件，最大 10MB',
-    backupNotice: '本地备份文件会保存到你的设备；云同步仅在点击“立即同步”时连接你配置的 R2/S3 存储，并且不会同步 Chrome 书签树。',
+    backupNotice: '本地备份适合离线保存和一次性迁移；云端备份适合多台电脑之间手动同步 KunTab 配置。',
     generalSettings: '通用设置',
     language: '语言',
     defaultEngine: '默认搜索引擎',
@@ -336,8 +343,14 @@ const LOCALE_TEXT = {
     backupTip1: 'Includes all folders and bookmarks',
     backupTip2: 'Includes favorites and settings',
     backupTip3: 'Can be used to migrate to another browser',
+    localBackupTitle: 'Local Backup',
+    localBackupDesc: 'Export a JSON file for offline storage, or restore a backup into a selected bookmark folder.',
+    cloudBackupTitle: 'Cloud Backup',
     cloudSyncTitle: 'Cloud Sync',
-    cloudSyncDesc: 'Sync KunTab settings and favorites through R2/S3-compatible storage',
+    cloudSyncDesc: 'Manually sync KunTab settings and favorite-site configuration to R2/S3 storage. Chrome bookmarks are not synced.',
+    cloudSyncTip1: 'Connects only when you start sync',
+    cloudSyncTip2: 'Syncs settings and favorite-site configuration',
+    cloudSyncTip3: 'Lets you choose local or remote on conflict',
     cloudSyncNow: 'Sync Now',
     cloudSyncing: 'Syncing...',
     cloudSyncTestConnection: 'Test Connection',
@@ -369,7 +382,7 @@ const LOCALE_TEXT = {
     chooseJson: 'Choose JSON File',
     importing: 'Importing...',
     importLimit: 'Supports .json files, recommended up to 10MB',
-    backupNotice: 'Local backup files stay on this device. Cloud sync connects to your configured R2/S3 storage only when you click Sync Now, and it does not sync the Chrome bookmark tree.',
+    backupNotice: 'Local backup is best for offline copies and one-time migration. Cloud backup is best for manually syncing KunTab configuration across computers.',
     generalSettings: 'General Settings',
     language: 'Language',
     defaultEngine: 'Default Search Engine',
@@ -2316,99 +2329,129 @@ ${serializedContext}
 
         {activeTab === 'backup' && (
           <section className="backup-page">
-            <div className="backup-panels">
-              <article className="backup-card">
-                <div className="backup-card-icon-container export-blue">
-                  <CircleArrowDown size={32} />
+            <div className="backup-section">
+              <div className="backup-section-header">
+                <div>
+                  <h2>{text.localBackupTitle}</h2>
+                  <p>{text.localBackupDesc}</p>
                 </div>
-                <h3>{text.backupExportTitle}</h3>
-                <p className="backup-card-desc">{text.backupExportDesc}</p>
-                <div className="backup-features-list">
-                  <div className="backup-feature-item export-item">
-                    <Check size={16} />
-                    <span>{text.backupTip1}</span>
+              </div>
+
+              <div className="backup-grid-2">
+                <article className="backup-feature-card">
+                  <div className="backup-card-header">
+                    <div className="backup-icon-wrapper export-style">
+                      <Download size={24} />
+                    </div>
+                    <div>
+                      <h3>{text.backupExportTitle}</h3>
+                      <p>{text.backupExportDesc}</p>
+                    </div>
                   </div>
-                  <div className="backup-feature-item export-item">
-                    <Check size={16} />
-                    <span>{text.backupTip2}</span>
+                  <div className="backup-card-body">
+                    <div className="backup-chip-row">
+                      <span>{text.backupTip1}</span>
+                      <span>{text.backupTip2}</span>
+                      <span>{text.backupTip3}</span>
+                    </div>
                   </div>
-                  <div className="backup-feature-item export-item">
-                    <Check size={16} />
-                    <span>{text.backupTip3}</span>
+                  <div className="backup-card-footer">
+                    <button className="primary backup-btn export-btn" onClick={() => onExportBackup('json')}>
+                      <Download size={16} />
+                      {text.exportJson}
+                    </button>
+                  </div>
+                </article>
+
+                <article className="backup-feature-card">
+                  <div className="backup-card-header">
+                    <div className="backup-icon-wrapper import-style">
+                      <Upload size={24} />
+                    </div>
+                    <div>
+                      <h3>{text.backupImportTitle}</h3>
+                      <p>{text.backupImportDesc}</p>
+                    </div>
+                  </div>
+                  <div className="backup-card-body">
+                    <div className="backup-form-group">
+                      <label>{text.importToFolder}</label>
+                      <div className="select-wrapper">
+                        <select value={backupFolderId} onChange={(event) => setBackupFolderId(event.target.value)}>
+                          {folderOptions.map((folder) => (
+                            <option key={folder.id} value={folder.id}>
+                              {folder.label} ({folder.count})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} className="select-arrow" />
+                      </div>
+                    </div>
+                    <div className="import-subtext">{text.importLimit}</div>
+                  </div>
+                  <div className="backup-card-footer">
+                    <label className={importing ? 'backup-file-picker-btn disabled' : 'backup-file-picker-btn'}>
+                      <Upload size={16} />
+                      {importing ? text.importing : text.chooseJson}
+                      <input
+                        type="file"
+                        accept=".json,application/json"
+                        disabled={importing}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) {
+                            onImportBackupFile(file);
+                          }
+                          event.target.value = '';
+                        }}
+                      />
+                    </label>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div className="backup-section">
+              <div className="backup-section-header">
+                <div>
+                  <h2>{text.cloudBackupTitle}</h2>
+                  <p>{text.cloudSyncDesc}</p>
+                </div>
+              </div>
+
+              <article className="cloud-sync-card">
+                <div className="cloud-card-header">
+                  <div className="backup-icon-wrapper cloud-style">
+                    <Cloud size={24} />
+                  </div>
+                  <div>
+                    <h3>{text.cloudSyncTitle}</h3>
+                    <p>{text.cloudSyncDesc}</p>
                   </div>
                 </div>
-                <div className="button-row" style={{ width: '100%' }}>
-                  <button className="primary backup-btn export-btn" onClick={() => onExportBackup('json')}>
-                    <CircleArrowUp size={16} />
-                    {text.exportJson}
+                <div className="cloud-card-body">
+                  <div className="cloud-features-grid">
+                    <div className="cloud-feature-item">
+                      <div className="feature-icon"><Check size={16} /></div>
+                      <span>{text.cloudSyncTip1}</span>
+                    </div>
+                    <div className="cloud-feature-item">
+                      <div className="feature-icon"><Check size={16} /></div>
+                      <span>{text.cloudSyncTip2}</span>
+                    </div>
+                    <div className="cloud-feature-item">
+                      <div className="feature-icon"><Check size={16} /></div>
+                      <span>{text.cloudSyncTip3}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="cloud-card-footer">
+                  <button className="primary backup-btn export-btn" onClick={onCloudSyncNow} disabled={cloudSyncing}>
+                    {cloudSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                    {cloudSyncing ? text.cloudSyncing : text.cloudSyncNow}
                   </button>
                 </div>
               </article>
-
-              <article className="backup-card">
-                <div className="backup-card-icon-container import-green">
-                  <CircleArrowUp size={32} />
-                </div>
-                <h3>{text.backupImportTitle}</h3>
-                <p className="backup-card-desc">{text.backupImportDesc}</p>
-                <div className="backup-folder-field">
-                  <label>{text.importToFolder}</label>
-                  <select value={backupFolderId} onChange={(event) => setBackupFolderId(event.target.value)}>
-                    {folderOptions.map((folder) => (
-                      <option key={folder.id} value={folder.id}>
-                        {folder.label} ({folder.count})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <label className={importing ? 'upload disabled backup-btn import-btn' : 'upload backup-btn import-btn'}>
-                  <CircleArrowDown size={16} style={{ display: 'inline', marginRight: '6px' }} />
-                  {importing ? text.importing : text.chooseJson}
-                  <input
-                    type="file"
-                    accept=".json,application/json"
-                    disabled={importing}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) {
-                        onImportBackupFile(file);
-                      }
-                      event.target.value = '';
-                    }}
-                  />
-                </label>
-                <div className="import-subtext">{text.importLimit}</div>
-              </article>
-
-              <article className="backup-card">
-                <div className="backup-card-icon-container cloud-blue">
-                  <Cloud size={32} />
-                </div>
-                <h3>{text.cloudSyncTitle}</h3>
-                <p className="backup-card-desc">{text.cloudSyncDesc}</p>
-                <div className="backup-features-list">
-                  <div className="backup-feature-item export-item">
-                    <Check size={16} />
-                    <span>{text.cloudSyncSettingsTitle}</span>
-                  </div>
-                  <div className="backup-feature-item export-item">
-                    <Check size={16} />
-                    <span>{text.cloudSyncConflictTitle}</span>
-                  </div>
-                </div>
-                <button className="primary backup-btn export-btn" onClick={onCloudSyncNow} disabled={cloudSyncing}>
-                  {cloudSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                  {cloudSyncing ? text.cloudSyncing : text.cloudSyncNow}
-                </button>
-              </article>
-            </div>
-
-            <div className="note-box">
-              <Info className="note-box-icon" size={20} />
-              <div className="note-box-content">
-                <div className="note-box-title">温馨提示</div>
-                <div className="note-box-desc">{text.backupNotice}</div>
-              </div>
             </div>
           </section>
         )}

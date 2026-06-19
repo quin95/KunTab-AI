@@ -1626,102 +1626,325 @@ select:focus {
   gap: 1.5rem;
 }
 
-.backup-panels {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 1.5rem;
+.backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-/* symmetric side-by-side card styles */
-.backup-card {
+.backup-section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0.25rem;
+}
+
+.backup-section-header h2 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+
+.backup-section-header p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  max-width: 54rem;
+}
+
+/* Two-column layout for local backup cards */
+.backup-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.backup-feature-card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  padding: 2.25rem 2rem;
+  padding: 2rem;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  gap: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 270px;
 }
 
-.backup-card-icon-container {
-  width: 5.5rem;
-  height: 5.5rem;
-  border-radius: 50%;
+.backup-feature-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Header style with icon and text */
+.backup-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.backup-icon-wrapper {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-.backup-card-icon-container.export-blue {
+.backup-icon-wrapper.export-style {
   background: var(--primary-soft);
   color: var(--primary);
 }
 
-.backup-card-icon-container.import-green {
+.backup-icon-wrapper.import-style {
   background: var(--success-soft);
   color: var(--success);
 }
 
-.backup-card-icon-container.cloud-blue {
+.backup-icon-wrapper.cloud-style {
   background: var(--primary-soft);
   color: var(--primary);
 }
 
-.backup-card h3 {
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+.backup-card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 750;
+  color: var(--text);
+  margin-bottom: 0.25rem;
   letter-spacing: -0.01em;
 }
 
-.backup-card-desc {
+.backup-card-header p {
   color: var(--muted);
-  font-size: 0.95rem;
-  margin-bottom: 2rem;
-  min-height: 2.5rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
 }
 
-/* Card features checklist */
-.backup-features-list {
+/* Card Body & Form Elements */
+.backup-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.85rem;
+}
+
+.backup-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.backup-chip-row span {
+  background: var(--primary-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 999px;
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.35rem 0.65rem;
+}
+
+.backup-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  text-align: left;
+}
+
+.backup-form-group label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* Custom select wrapper for clean dropdowns */
+.select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.select-wrapper select {
+  width: 100%;
+  padding-right: 2.25rem;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  font-weight: 500;
+}
+
+.select-wrapper select:hover {
+  border-color: var(--primary);
+}
+
+.select-wrapper .select-arrow {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+  transition: color 0.2s ease;
+}
+
+.select-wrapper select:focus + .select-arrow {
+  color: var(--primary);
+}
+
+.import-subtext {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: left;
+  line-height: 1.4;
+}
+
+/* Card Footer with bottom alignment */
+.backup-card-footer {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   width: 100%;
-  text-align: left;
-  border-top: 1px dashed var(--line);
-  border-bottom: 1px dashed var(--line);
-  padding: 1.5rem 0;
-  margin-bottom: 2rem;
+  margin-top: auto;
 }
 
-.backup-feature-item {
+/* Styled File Picker Button */
+.backup-file-picker-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--success);
+  color: var(--success);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.backup-file-picker-btn:hover {
+  background: var(--success-soft);
+}
+
+.backup-file-picker-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.backup-file-picker-btn input[type="file"] {
+  display: none !important;
+}
+
+/* Cloud sync wide card styling */
+.cloud-sync-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 2rem;
+  align-items: center;
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cloud-sync-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg);
+}
+
+.cloud-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.cloud-card-header h3 {
+  font-size: 1.1rem;
+  font-weight: 750;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.cloud-card-header p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.cloud-card-body {
+  grid-column: 1;
+}
+
+.cloud-card-footer {
+  grid-column: 2;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.cloud-features-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.cloud-feature-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: var(--bg);
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  color: var(--text);
+  border: 1px solid var(--line);
+  line-height: 1.2;
+}
+
+.cloud-feature-item .feature-icon {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.backup-feature-item svg {
+  justify-content: center;
+  color: var(--primary);
   flex-shrink: 0;
 }
 
-.backup-feature-item.export-item svg {
-  color: var(--primary);
-}
-
-.backup-feature-item.import-item svg {
-  color: var(--success);
-}
-
-/* Card Button Actions */
+/* Button general overrides for backup */
 .backup-btn {
   width: 100%;
-  padding: 0.75rem 1rem;
-  font-size: 1rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: var(--radius);
 }
 
 .backup-btn.export-btn {
@@ -1734,50 +1957,17 @@ select:focus {
   background: color-mix(in srgb, var(--primary) 85%, #000000);
 }
 
-.backup-btn.import-btn {
-  border-color: var(--success);
-  color: var(--success);
-  background: transparent;
-  border-width: 1.5px;
-}
-
-.backup-btn.import-btn:hover {
-  background: var(--success-soft);
-}
-
-.backup-folder-field {
-  width: 100%;
-  margin-bottom: 1rem;
-  text-align: left;
-}
-
-.backup-folder-field label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 0.35rem;
-}
-
-.backup-folder-field select {
-  width: 100%;
-}
-
-.import-subtext {
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin-top: 0.5rem;
-}
-
-/* Bottom Alert Box info box */
+/* Bottom note box */
 .note-box {
-  background: #f8fafc;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 1.25rem 1.5rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   align-items: flex-start;
+  box-shadow: var(--shadow);
+  text-align: left;
 }
 
 .note-box-icon {
@@ -1791,16 +1981,77 @@ select:focus {
 }
 
 .note-box-title {
-  font-weight: 700;
+  font-weight: 750;
   font-size: 0.95rem;
   color: var(--primary);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .note-box-desc {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: var(--muted);
   line-height: 1.6;
+}
+
+/* Scenic Full Background overrides */
+.app-shell.has-scenic-bg .backup-feature-card,
+.app-shell.has-scenic-bg .cloud-sync-card,
+.app-shell.has-scenic-bg .note-box {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .backup-feature-card,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .cloud-sync-card,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .note-box {
+  background: rgba(30, 41, 59, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+
+.app-shell.has-scenic-bg .backup-icon-wrapper {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .backup-icon-wrapper {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .cloud-feature-item {
+  background: rgba(255, 255, 255, 0.4);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .cloud-feature-item {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Media Queries */
+@media (max-width: 1024px) {
+  .backup-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cloud-sync-card {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .cloud-card-footer {
+    grid-column: 1;
+    justify-content: stretch;
+  }
+  .cloud-card-footer button {
+    width: 100%;
+  }
 }
 
 /* ==========================================================================
