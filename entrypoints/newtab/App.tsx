@@ -3178,301 +3178,415 @@ ${serializedContext}
       </main>
 
       {/* Cloud Sync Conflict Modal */}
-      {cloudSyncConflict && (
-        <div className="modal-mask" onClick={() => resolveCloudSyncConflict('cancel')}>
-          <div className="modal-card large" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{text.cloudSyncConflictTitle}</h3>
-            </div>
-            <div className="conflict-modal-body">
-              <p className="cloud-sync-conflict-desc">{text.cloudSyncConflictDesc}</p>
-              
-              <div className="conflict-groups-scroll">
-                {/* Section 1: Sync Metadata */}
-                <div className="conflict-group-card">
-                  <h4>
-                    <RefreshCw size={14} />
-                    <span>同步状态 (Sync Status)</span>
-                  </h4>
-                  <div className="conflict-rows-list">
-                    {/* Version */}
-                    <div className="conflict-diff-row">
-                      <div className="conflict-diff-meta">
-                        <Info size={14} />
-                        <span>同步版本 (Version)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={`v${localSyncMetadata?.localVersion ?? '未知'}`}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">v{localSyncMetadata?.localVersion ?? '未知'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={`v${cloudSyncConflict.remoteVersion}`}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">v{cloudSyncConflict.remoteVersion}</span>
-                        </div>
-                      </div>
-                    </div>
+      {cloudSyncConflict && (() => {
+        const diffFavorites = favorites.length !== cloudSyncConflict.data.favoriteSites.length;
+        const diffTheme = settings.theme !== cloudSyncConflict.data.settings.theme;
+        const diffEngine = settings.searchEngine !== cloudSyncConflict.data.settings.searchEngine;
+        const diffStartPage = settings.startPage !== cloudSyncConflict.data.settings.startPage;
+        const diffLanguage = settings.language !== cloudSyncConflict.data.settings.language;
+        const diffWallpaper = (settings.customBgUrl || '') !== (cloudSyncConflict.data.settings.customBgUrl || '');
+        const diffBgBlur = (settings.bgBlur ?? 0) !== (cloudSyncConflict.data.settings.bgBlur ?? 0);
+        const diffBgOpacity = (settings.bgOpacity ?? 0) !== (cloudSyncConflict.data.settings.bgOpacity ?? 0);
+        const diffCompactMode = settings.compactMode !== cloudSyncConflict.data.settings.compactMode;
+        const diffFontSize = settings.fontSize !== cloudSyncConflict.data.settings.fontSize;
 
-                    {/* Updated At */}
-                    <div className="conflict-diff-row">
-                      <div className="conflict-diff-meta">
-                        <Clock size={14} />
-                        <span>更新时间 (Updated At)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={localSyncMetadata?.localUpdatedAt ? formatDateTime(localSyncMetadata.localUpdatedAt) : '未知'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">
-                            {localSyncMetadata?.localUpdatedAt ? formatDateTime(localSyncMetadata.localUpdatedAt) : '未知'}
-                          </span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={formatDateTime(cloudSyncConflict.updatedAt)}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">
-                            {formatDateTime(cloudSyncConflict.updatedAt)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+        const hasGeneralDiffs = 
+          diffFavorites ||
+          diffTheme ||
+          diffEngine ||
+          diffStartPage ||
+          diffLanguage ||
+          diffWallpaper ||
+          diffBgBlur ||
+          diffBgOpacity ||
+          diffCompactMode ||
+          diffFontSize;
+
+        const diffAiProvider = settings.aiProvider !== cloudSyncConflict.data.settings.aiProvider;
+        const diffAiModel = (settings.aiProvider !== 'none' || cloudSyncConflict.data.settings.aiProvider !== 'none') && settings.aiModel !== cloudSyncConflict.data.settings.aiModel;
+        const diffAiBaseUrl = (settings.aiBaseUrl || '') !== (cloudSyncConflict.data.settings.aiBaseUrl || '');
+        const diffAiApiKey = Boolean(settings.aiApiKey) !== Boolean(cloudSyncConflict.data.settings.aiApiKey);
+
+        const hasAiDiffs =
+          diffAiProvider ||
+          diffAiModel ||
+          diffAiBaseUrl ||
+          diffAiApiKey;
+
+        return (
+          <div className="modal-mask" onClick={() => resolveCloudSyncConflict('cancel')}>
+            <div className="modal-card large" onClick={(event) => event.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{text.cloudSyncConflictTitle}</h3>
+              </div>
+              <div className="conflict-modal-body">
+                <p className="cloud-sync-conflict-desc">{text.cloudSyncConflictDesc}</p>
+                
+                {/* Meta Banner for Version & Updated At */}
+                <div className="cloud-sync-meta-banner">
+                  <div className="meta-banner-side local-side">
+                    <span className="side-title">本地配置 (Local)</span>
+                    <span className="side-info">Version: v{localSyncMetadata?.localVersion ?? '未知'}</span>
+                    <span className="side-info">更新时间: {localSyncMetadata?.localUpdatedAt ? formatDateTime(localSyncMetadata.localUpdatedAt) : '未知'}</span>
+                  </div>
+                  <div className="meta-banner-divider">
+                    <RefreshCw size={16} className="animate-spin-slow" />
+                  </div>
+                  <div className="meta-banner-side remote-side">
+                    <span className="side-title">云端配置 (Remote)</span>
+                    <span className="side-info">Version: v{cloudSyncConflict.remoteVersion}</span>
+                    <span className="side-info">更新时间: {formatDateTime(cloudSyncConflict.updatedAt)}</span>
                   </div>
                 </div>
 
-                {/* Section 2: General & Appearance Settings */}
-                <div className="conflict-group-card">
-                  <h4>
-                    <Sliders size={14} />
-                    <span>通用与外观 (General & Appearance)</span>
-                  </h4>
-                  <div className="conflict-rows-list">
-                    {/* Favorites */}
-                    <div className={`conflict-diff-row ${favorites.length !== cloudSyncConflict.data.favoriteSites.length ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Star size={14} />
-                        <span>常用书签 (Favorites)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={`${favorites.length} 个书签`}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{favorites.length} 个书签</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={`${cloudSyncConflict.data.favoriteSites.length} 个书签`}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.favoriteSites.length} 个书签</span>
-                        </div>
-                      </div>
+                <div className="conflict-groups-scroll">
+                  {!hasGeneralDiffs && !hasAiDiffs && (
+                    <div className="conflict-no-diffs-placeholder">
+                      <CheckCircle2 size={28} />
+                      <p>所有配置与常用书签均完全一致，无冲突配置项</p>
                     </div>
+                  )}
 
-                    {/* Theme */}
-                    <div className={`conflict-diff-row ${settings.theme !== cloudSyncConflict.data.settings.theme ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Palette size={14} />
-                        <span>主题外观 (Theme)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.theme === 'light' ? '浅色' : settings.theme === 'dark' ? '深色' : '跟随系统'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">
-                            {settings.theme === 'light' ? '浅色' : settings.theme === 'dark' ? '深色' : '跟随系统'}
-                          </span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.theme === 'light' ? '浅色' : cloudSyncConflict.data.settings.theme === 'dark' ? '深色' : '跟随系统'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">
-                            {cloudSyncConflict.data.settings.theme === 'light' ? '浅色' : cloudSyncConflict.data.settings.theme === 'dark' ? '深色' : '跟随系统'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Engine */}
-                    {(() => {
-                      const localEngineName = SEARCH_ENGINES.find(e => e.id === settings.searchEngine)?.label ?? settings.searchEngine;
-                      const remoteEngineName = SEARCH_ENGINES.find(e => e.id === cloudSyncConflict.data.settings.searchEngine)?.label ?? cloudSyncConflict.data.settings.searchEngine;
-                      const hasEngineDiff = settings.searchEngine !== cloudSyncConflict.data.settings.searchEngine;
-                      return (
-                        <div className={`conflict-diff-row ${hasEngineDiff ? 'has-diff' : ''}`}>
-                          <div className="conflict-diff-meta">
-                            <Search size={14} />
-                            <span>默认引擎 (Engine)</span>
-                          </div>
-                          <div className="conflict-diff-values">
-                            <div className="diff-val local-val" title={localEngineName}>
-                              <span className="diff-label">本地:</span>
-                              <span className="diff-text">{localEngineName}</span>
-                            </div>
-                            <span className="diff-arrow">→</span>
-                            <div className="diff-val remote-val" title={remoteEngineName}>
-                              <span className="diff-label">云端:</span>
-                              <span className="diff-text">{remoteEngineName}</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Start Page */}
-                    <div className={`conflict-diff-row ${settings.startPage !== cloudSyncConflict.data.settings.startPage ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Home size={14} />
-                        <span>启动主页 (Start Page)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.startPage === 'home' ? '导航主页' : '原生书签'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.startPage === 'home' ? '导航主页' : '原生书签'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.startPage === 'home' ? '导航主页' : '原生书签'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.startPage === 'home' ? '导航主页' : '原生书签'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Language */}
-                    <div className={`conflict-diff-row ${settings.language !== cloudSyncConflict.data.settings.language ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Languages size={14} />
-                        <span>界面语言 (Language)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.language === 'zh-CN' ? '简体中文' : 'English'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.language === 'zh-CN' ? '简体中文' : 'English'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.language === 'zh-CN' ? '简体中文' : 'English'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.language === 'zh-CN' ? '简体中文' : 'English'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Wallpaper */}
-                    <div className={`conflict-diff-row ${(settings.customBgUrl || '') !== (cloudSyncConflict.data.settings.customBgUrl || '') ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Image size={14} />
-                        <span>背景壁纸 (Wallpaper)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.customBgUrl || '默认'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{truncateUrl(settings.customBgUrl)}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.customBgUrl || '默认'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{truncateUrl(cloudSyncConflict.data.settings.customBgUrl)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 3: AI Assistant Settings */}
-                <div className="conflict-group-card">
-                  <h4>
-                    <Sparkles size={14} />
-                    <span>AI 助手配置 (AI Assistant)</span>
-                  </h4>
-                  <div className="conflict-rows-list">
-                    {/* AI Provider */}
-                    <div className={`conflict-diff-row ${settings.aiProvider !== cloudSyncConflict.data.settings.aiProvider ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Sparkles size={14} />
-                        <span>AI 服务商 (AI Provider)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.aiProvider === 'none' ? '未启用' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.aiProvider === 'none' ? '未启用' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiProvider === 'none' ? '未启用' : cloudSyncConflict.data.settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.aiProvider === 'none' ? '未启用' : cloudSyncConflict.data.settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* AI Model */}
-                    <div className={`conflict-diff-row ${((settings.aiProvider !== 'none' || cloudSyncConflict.data.settings.aiProvider !== 'none') && settings.aiModel !== cloudSyncConflict.data.settings.aiModel) ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
+                  {/* Section: General & Appearance Settings */}
+                  {hasGeneralDiffs && (
+                    <div className="conflict-group-card">
+                      <h4>
                         <Sliders size={14} />
-                        <span>AI 模型 (AI Model)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.aiProvider === 'none' ? '-' : settings.aiModel}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.aiProvider === 'none' ? '-' : settings.aiModel}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiProvider === 'none' ? '-' : cloudSyncConflict.data.settings.aiModel}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.aiProvider === 'none' ? '-' : cloudSyncConflict.data.settings.aiModel}</span>
-                        </div>
-                      </div>
-                    </div>
+                        <span>通用与外观 (General & Appearance)</span>
+                      </h4>
+                      <div className="conflict-rows-list">
+                        {/* Favorites */}
+                        {diffFavorites && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Star size={14} />
+                              <span>常用书签 (Favorites)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={`${favorites.length} 个书签`}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{favorites.length} 个书签</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={`${cloudSyncConflict.data.favoriteSites.length} 个书签`}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.favoriteSites.length} 个书签</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                    {/* AI Base URL */}
-                    <div className={`conflict-diff-row ${(settings.aiBaseUrl || '') !== (cloudSyncConflict.data.settings.aiBaseUrl || '') ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Globe size={14} />
-                        <span>接口地址 (AI Base URL)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.aiBaseUrl || '默认'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.aiBaseUrl ? truncateUrl(settings.aiBaseUrl) : '默认'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiBaseUrl || '默认'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.aiBaseUrl ? truncateUrl(cloudSyncConflict.data.settings.aiBaseUrl) : '默认'}</span>
-                        </div>
-                      </div>
-                    </div>
+                        {/* Theme */}
+                        {diffTheme && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Palette size={14} />
+                              <span>主题外观 (Theme)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.theme === 'light' ? '浅色' : settings.theme === 'dark' ? '深色' : '跟随系统'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">
+                                  {settings.theme === 'light' ? '浅色' : settings.theme === 'dark' ? '深色' : '跟随系统'}
+                                </span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.theme === 'light' ? '浅色' : cloudSyncConflict.data.settings.theme === 'dark' ? '深色' : '跟随系统'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">
+                                  {cloudSyncConflict.data.settings.theme === 'light' ? '浅色' : cloudSyncConflict.data.settings.theme === 'dark' ? '深色' : '跟随系统'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
-                    {/* AI API Key */}
-                    <div className={`conflict-diff-row ${Boolean(settings.aiApiKey) !== Boolean(cloudSyncConflict.data.settings.aiApiKey) ? 'has-diff' : ''}`}>
-                      <div className="conflict-diff-meta">
-                        <Type size={14} />
-                        <span>AI 密钥 (AI API Key)</span>
-                      </div>
-                      <div className="conflict-diff-values">
-                        <div className="diff-val local-val" title={settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}>
-                          <span className="diff-label">本地:</span>
-                          <span className="diff-text">{settings.aiApiKey ? '已配置' : '未配置'}</span>
-                        </div>
-                        <span className="diff-arrow">→</span>
-                        <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}>
-                          <span className="diff-label">云端:</span>
-                          <span className="diff-text">{cloudSyncConflict.data.settings.aiApiKey ? '已配置' : '未配置'}</span>
-                        </div>
+                        {/* Engine */}
+                        {diffEngine && (() => {
+                          const localEngineName = SEARCH_ENGINES.find(e => e.id === settings.searchEngine)?.label ?? settings.searchEngine;
+                          const remoteEngineName = SEARCH_ENGINES.find(e => e.id === cloudSyncConflict.data.settings.searchEngine)?.label ?? cloudSyncConflict.data.settings.searchEngine;
+                          return (
+                            <div className="conflict-diff-row">
+                              <div className="conflict-diff-meta">
+                                <Search size={14} />
+                                <span>默认引擎 (Engine)</span>
+                              </div>
+                              <div className="conflict-diff-values">
+                                <div className="diff-val local-val" title={localEngineName}>
+                                  <span className="diff-label">本地:</span>
+                                  <span className="diff-text">{localEngineName}</span>
+                                </div>
+                                <span className="diff-arrow">→</span>
+                                <div className="diff-val remote-val" title={remoteEngineName}>
+                                  <span className="diff-label">云端:</span>
+                                  <span className="diff-text">{remoteEngineName}</span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Start Page */}
+                        {diffStartPage && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Home size={14} />
+                              <span>启动主页 (Start Page)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.startPage === 'home' ? '导航主页' : '原生书签'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.startPage === 'home' ? '导航主页' : '原生书签'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.startPage === 'home' ? '导航主页' : '原生书签'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.startPage === 'home' ? '导航主页' : '原生书签'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Language */}
+                        {diffLanguage && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Languages size={14} />
+                              <span>界面语言 (Language)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.language === 'zh-CN' ? '简体中文' : 'English'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.language === 'zh-CN' ? '简体中文' : 'English'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.language === 'zh-CN' ? '简体中文' : 'English'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.language === 'zh-CN' ? '简体中文' : 'English'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Wallpaper */}
+                        {diffWallpaper && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Image size={14} />
+                              <span>背景壁纸 (Wallpaper)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.customBgUrl || '默认'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{truncateUrl(settings.customBgUrl)}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.customBgUrl || '默认'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{truncateUrl(cloudSyncConflict.data.settings.customBgUrl)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Wallpaper Blur */}
+                        {diffBgBlur && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Sliders size={14} />
+                              <span>壁纸模糊 (Blur)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={`${settings.bgBlur ?? 0}px`}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{(settings.bgBlur ?? 0)}px</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={`${cloudSyncConflict.data.settings.bgBlur ?? 0}px`}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{(cloudSyncConflict.data.settings.bgBlur ?? 0)}px</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Wallpaper Opacity */}
+                        {diffBgOpacity && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Sliders size={14} />
+                              <span>壁纸遮罩 (Opacity)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={`${settings.bgOpacity ?? 0}%`}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{(settings.bgOpacity ?? 0)}%</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={`${cloudSyncConflict.data.settings.bgOpacity ?? 0}%`}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{(cloudSyncConflict.data.settings.bgOpacity ?? 0)}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Compact Layout */}
+                        {diffCompactMode && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Grid3X3 size={14} />
+                              <span>紧凑布局 (Compact)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.compactMode ? '开启' : '关闭'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.compactMode ? '开启' : '关闭'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.compactMode ? '开启' : '关闭'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.compactMode ? '开启' : '关闭'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Font Size */}
+                        {diffFontSize && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Type size={14} />
+                              <span>字体大小 (Size)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.fontSize === 'small' ? text.sizeSmall : settings.fontSize === 'large' ? text.sizeLarge : text.sizeMedium}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.fontSize === 'small' ? text.sizeSmall : settings.fontSize === 'large' ? text.sizeLarge : text.sizeMedium}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.fontSize === 'small' ? text.sizeSmall : cloudSyncConflict.data.settings.fontSize === 'large' ? text.sizeLarge : text.sizeMedium}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.fontSize === 'small' ? text.sizeSmall : cloudSyncConflict.data.settings.fontSize === 'large' ? text.sizeLarge : text.sizeMedium}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Section: AI Assistant Settings */}
+                  {hasAiDiffs && (
+                    <div className="conflict-group-card">
+                      <h4>
+                        <Sparkles size={14} />
+                        <span>AI 助手配置 (AI Assistant)</span>
+                      </h4>
+                      <div className="conflict-rows-list">
+                        {/* AI Provider */}
+                        {diffAiProvider && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Sparkles size={14} />
+                              <span>AI 服务商 (AI Provider)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.aiProvider === 'none' ? '未启用' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.aiProvider === 'none' ? '未启用' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiProvider === 'none' ? '未启用' : cloudSyncConflict.data.settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.aiProvider === 'none' ? '未启用' : cloudSyncConflict.data.settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI Model */}
+                        {diffAiModel && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Sliders size={14} />
+                              <span>AI 模型 (AI Model)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.aiProvider === 'none' ? '-' : settings.aiModel}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.aiProvider === 'none' ? '-' : settings.aiModel}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiProvider === 'none' ? '-' : cloudSyncConflict.data.settings.aiModel}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.aiProvider === 'none' ? '-' : cloudSyncConflict.data.settings.aiModel}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI Base URL */}
+                        {diffAiBaseUrl && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Globe size={14} />
+                              <span>接口地址 (AI Base URL)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.aiBaseUrl || '默认'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.aiBaseUrl ? truncateUrl(settings.aiBaseUrl) : '默认'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiBaseUrl || '默认'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.aiBaseUrl ? truncateUrl(cloudSyncConflict.data.settings.aiBaseUrl) : '默认'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI API Key */}
+                        {diffAiApiKey && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Type size={14} />
+                              <span>AI 密钥 (AI API Key)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{settings.aiApiKey ? '已配置' : '未配置'}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={cloudSyncConflict.data.settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{cloudSyncConflict.data.settings.aiApiKey ? '已配置' : '未配置'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-            <div className="modal-actions">
-              <button onClick={() => resolveCloudSyncConflict('cancel')} disabled={cloudSyncing}>
-                {text.cloudSyncCancel}
-              </button>
-              <button onClick={() => resolveCloudSyncConflict('remote')} disabled={cloudSyncing}>
-                {text.cloudSyncUseRemote}
-              </button>
-              <button className="primary" onClick={() => resolveCloudSyncConflict('local')} disabled={cloudSyncing}>
-                {text.cloudSyncUseLocal}
-              </button>
+              <div className="modal-actions">
+                <button onClick={() => resolveCloudSyncConflict('cancel')} disabled={cloudSyncing}>
+                  {text.cloudSyncCancel}
+                </button>
+                <button onClick={() => resolveCloudSyncConflict('remote')} disabled={cloudSyncing}>
+                  {text.cloudSyncUseRemote}
+                </button>
+                <button className="primary" onClick={() => resolveCloudSyncConflict('local')} disabled={cloudSyncing}>
+                  {text.cloudSyncUseLocal}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Edit Bookmark Modal */}
       {editTarget && (
