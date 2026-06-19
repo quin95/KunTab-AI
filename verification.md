@@ -27,12 +27,14 @@
   - 紧凑布局
   - 字体大小
   - 云同步设置（Endpoint、Bucket、Access Key ID、Secret Access Key、Key 前缀）
+  - 云同步测试连接（支持识别远端文件不存在、远端 JSON 无效、网络/权限/CORS 等失败）
   - 清除本地缓存（重置插件设置与常用书签，不删除 Chrome 书签）
   - 关于版本信息
 - 同步与存储
   - `browser.storage.sync`：设置项 + 常用书签
   - `browser.storage.local`：最近打开记录、云同步凭证、本机同步版本元数据
   - R2/S3 云同步文件：只包含 KunTab 设置、常用书签 URL 列表和远端版本元数据
+  - 常用书签顺序：按云端 `favoriteSites` 数组顺序恢复，不额外引入排序字段
 - 新标签页接管
   - 已配置 `chrome_url_overrides.newtab = newtab.html`
 - 安全与权限
@@ -55,7 +57,7 @@ npm run build
 结果：
 
 - `npm run compile` 通过（`tsc --noEmit`）
-- `npm run test -- entrypoints/newtab/lib/cloudSync.test.ts entrypoints/newtab/lib/s3Client.test.ts` 通过（2 个测试文件，15 条用例）
+- `npm run test -- entrypoints/newtab/lib/cloudSync.test.ts entrypoints/newtab/lib/s3Client.test.ts` 通过（2 个测试文件，16 条用例）
 - `npm run build` 通过（生成 `.output/chrome-mv3`）
 - 产物 manifest 包含：
   - `permissions`: `bookmarks`, `storage`

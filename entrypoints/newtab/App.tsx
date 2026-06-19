@@ -179,6 +179,12 @@ const LOCALE_TEXT = {
     cloudSyncDesc: '使用 R2/S3 兼容存储同步 KunTab 设置和常用书签',
     cloudSyncNow: '立即同步',
     cloudSyncing: '同步中...',
+    cloudSyncTestConnection: '测试连接',
+    cloudSyncTesting: '测试中...',
+    cloudSyncTestSuccess: '连接成功',
+    cloudSyncTestMissing: '连接成功，远端文件不存在，首次同步会创建',
+    cloudSyncTestInvalidJson: '连接成功，但远端同步文件不是有效 JSON',
+    cloudSyncTestFailed: '连接失败',
     cloudSyncSettingsTitle: '云同步设置',
     cloudSyncEndpoint: '端点地址',
     cloudSyncEndpointDesc: 'R2/S3 兼容对象存储的 endpoint 地址',
@@ -335,6 +341,12 @@ const LOCALE_TEXT = {
     cloudSyncDesc: 'Sync KunTab settings and favorites through R2/S3-compatible storage',
     cloudSyncNow: 'Sync Now',
     cloudSyncing: 'Syncing...',
+    cloudSyncTestConnection: 'Test Connection',
+    cloudSyncTesting: 'Testing...',
+    cloudSyncTestSuccess: 'Connected',
+    cloudSyncTestMissing: 'Connected. Remote file does not exist and will be created on first sync',
+    cloudSyncTestInvalidJson: 'Connected, but the remote sync file is not valid JSON',
+    cloudSyncTestFailed: 'Connection Failed',
     cloudSyncSettingsTitle: 'Cloud Sync Settings',
     cloudSyncEndpoint: 'Endpoint URL',
     cloudSyncEndpointDesc: 'Endpoint for your R2/S3-compatible object storage',
@@ -496,6 +508,8 @@ export default function App() {
   const [cloudSyncSettings, setCloudSyncSettingsState] = useState(DEFAULT_CLOUD_SYNC_SETTINGS);
   const [cloudSyncing, setCloudSyncing] = useState(false);
   const [cloudSyncConflict, setCloudSyncConflict] = useState<CloudSyncPayload | null>(null);
+  const [testingCloudSyncConnection, setTestingCloudSyncConnection] = useState(false);
+  const [cloudSyncConnectionResult, setCloudSyncConnectionResult] = useState<{ ok: boolean; latencyMs: number; message: string } | null>(null);
 
   // Pagination State
   const [pageSize, setPageSize] = useState(20);
@@ -1278,6 +1292,47 @@ export default function App() {
       showToast(error instanceof Error ? error.message : '云同步失败');
     } finally {
       setCloudSyncing(false);
+    }
+  };
+
+  const onTestCloudSyncConnection = async () => {
+    setTestingCloudSyncConnection(true);
+    setCloudSyncConnectionResult(null);
+    const startedAt = performance.now();
+    try {
+      const key = buildS3ObjectKey(cloudSyncSettings.keyPrefix);
+      const rawRemote = await getS3Json<unknown>(cloudSyncSettings, key);
+      const latencyMs = Math.round(performance.now() - startedAt);
+      if (!rawRemote) {
+        setCloudSyncConnectionResult({
+          ok: true,
+          latencyMs,
+          message: text.cloudSyncTestMissing,
+        });
+        showToast(text.cloudSyncTestMissing);
+        return;
+      }
+
+      parseCloudSyncPayload(rawRemote);
+      setCloudSyncConnectionResult({
+        ok: true,
+        latencyMs,
+        message: text.cloudSyncTestSuccess,
+      });
+      showToast(`${text.cloudSyncTestSuccess} (${latencyMs}ms)`);
+    } catch (error) {
+      const latencyMs = Math.round(performance.now() - startedAt);
+      const message = error instanceof Error ? error.message : text.cloudSyncTestFailed;
+      const isPayloadError = message.includes('远端同步') || message.includes('JSON');
+      const displayMessage = isPayloadError ? text.cloudSyncTestInvalidJson : message;
+      setCloudSyncConnectionResult({
+        ok: isPayloadError,
+        latencyMs,
+        message: displayMessage,
+      });
+      showToast(isPayloadError ? displayMessage : `${text.cloudSyncTestFailed}: ${displayMessage}`);
+    } finally {
+      setTestingCloudSyncConnection(false);
     }
   };
 
@@ -2958,6 +3013,52 @@ ${serializedContext}
                   onChange={(event) => saveCloudSyncSettingsPatch({ keyPrefix: event.target.value.trim() })}
                 />
               </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><CheckCircle2 size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncTestConnection}</span>
+                    <span className="setting-desc">{text.cloudSyncDesc}</span>
+                  </div>
+                </div>
+                <div className="about-row-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {cloudSyncConnectionResult && (
+                    <span className={`ai-test-badge ${cloudSyncConnectionResult.ok ? 'success' : 'failed'}`}>
+                      {cloudSyncConnectionResult.ok ? (
+                        <>
+                          <CheckCircle2 size={14} style={{ marginRight: '4px' }} />
+                          {cloudSyncConnectionResult.message} ({cloudSyncConnectionResult.latencyMs}ms)
+                        </>
+                      ) : (
+                        <>
+                          <XCircle size={14} style={{ marginRight: '4px' }} />
+                          {text.cloudSyncTestFailed}
+                        </>
+                      )}
+                    </span>
+                  )}
+                  <button
+                    className="setting-btn-primary"
+                    onClick={onTestCloudSyncConnection}
+                    disabled={testingCloudSyncConnection}
+                  >
+                    {testingCloudSyncConnection ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" style={{ marginRight: '4px' }} />
+                        {text.cloudSyncTesting}
+                      </>
+                    ) : (
+                      text.cloudSyncTestConnection
+                    )}
+                  </button>
+                </div>
+              </div>
+              {cloudSyncConnectionResult && !cloudSyncConnectionResult.ok && (
+                <div className="ai-test-error-log">
+                  {cloudSyncConnectionResult.message}
+                </div>
+              )}
             </article>
 
             <article className="settings-card">

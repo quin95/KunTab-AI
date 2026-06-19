@@ -125,4 +125,24 @@ describe('favorite site conversion', () => {
       skipped: 1,
     });
   });
+
+  it('preserves remote favorite site array order when resolving local ids', () => {
+    const result = resolveCloudFavoriteSites(
+      [
+        { title: 'Third', url: 'https://third.example/' },
+        { title: 'First', url: 'https://first.example/' },
+        { title: 'Second', url: 'https://second.example/' },
+      ],
+      [
+        bookmark({ id: 'first', url: 'https://first.example/' }),
+        bookmark({ id: 'second', url: 'https://second.example/' }),
+        bookmark({ id: 'third', url: 'https://third.example/' }),
+      ],
+    );
+
+    expect(result).toEqual({
+      favorites: { favorites: ['third', 'first', 'second'] },
+      skipped: 0,
+    });
+  });
 });
