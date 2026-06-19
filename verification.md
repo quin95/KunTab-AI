@@ -27,7 +27,7 @@
   - 紧凑布局
   - 字体大小
   - 云同步设置（Endpoint、Bucket、Access Key ID、Secret Access Key、Key 前缀）
-  - 云同步测试连接（支持识别远端文件不存在、远端 JSON 无效、网络/权限/CORS 等失败）
+  - 云同步测试连接（通过写入并读回探测文件验证 R2/S3 权限，可识别网络/权限/CORS 等失败）
   - 清除本地缓存（重置插件设置与常用书签，不删除 Chrome 书签）
   - 关于版本信息
 - 同步与存储
@@ -57,7 +57,7 @@ npm run build
 结果：
 
 - `npm run compile` 通过（`tsc --noEmit`）
-- `npm run test -- entrypoints/newtab/lib/cloudSync.test.ts entrypoints/newtab/lib/s3Client.test.ts` 通过（2 个测试文件，16 条用例）
+- `npm run test -- entrypoints/newtab/lib/cloudSync.test.ts entrypoints/newtab/lib/s3Client.test.ts` 通过（2 个测试文件，17 条用例）
 - `npm run build` 通过（生成 `.output/chrome-mv3`）
 - 产物 manifest 包含：
   - `permissions`: `bookmarks`, `storage`

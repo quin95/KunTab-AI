@@ -62,7 +62,7 @@ import {
   parseCloudSyncPayload,
   resolveCloudFavoriteSites,
 } from './lib/cloudSync';
-import { buildS3ObjectKey, getS3Json, putS3Json } from './lib/s3Client';
+import { buildS3ConnectionTestKey, buildS3ObjectKey, getS3Json, putS3Json } from './lib/s3Client';
 import { getEngineById, parseSearchCommand, SEARCH_ENGINES } from './lib/search';
 import { faviconOf, formatDateTime, formatRelativeTime, greetingByTime, hostnameOf } from './lib/utils';
 import {
@@ -181,9 +181,8 @@ const LOCALE_TEXT = {
     cloudSyncing: '同步中...',
     cloudSyncTestConnection: '测试连接',
     cloudSyncTesting: '测试中...',
-    cloudSyncTestSuccess: '连接成功',
-    cloudSyncTestMissing: '连接成功，远端文件不存在，首次同步会创建',
-    cloudSyncTestInvalidJson: '连接成功，但远端同步文件不是有效 JSON',
+    cloudSyncTestWritable: '连接成功，已验证写入和读取权限',
+    cloudSyncTestInvalidProbe: '连接成功，但测试文件读回校验失败',
     cloudSyncTestFailed: '连接失败',
     cloudSyncSettingsTitle: '云同步设置',
     cloudSyncEndpoint: '端点地址',
@@ -343,9 +342,8 @@ const LOCALE_TEXT = {
     cloudSyncing: 'Syncing...',
     cloudSyncTestConnection: 'Test Connection',
     cloudSyncTesting: 'Testing...',
-    cloudSyncTestSuccess: 'Connected',
-    cloudSyncTestMissing: 'Connected. Remote file does not exist and will be created on first sync',
-    cloudSyncTestInvalidJson: 'Connected, but the remote sync file is not valid JSON',
+    cloudSyncTestWritable: 'Connected. Write and read permissions verified',
+    cloudSyncTestInvalidProbe: 'Connected, but the probe file validation failed',
     cloudSyncTestFailed: 'Connection Failed',
     cloudSyncSettingsTitle: 'Cloud Sync Settings',
     cloudSyncEndpoint: 'Endpoint URL',
@@ -1300,37 +1298,39 @@ export default function App() {
     setCloudSyncConnectionResult(null);
     const startedAt = performance.now();
     try {
-      const key = buildS3ObjectKey(cloudSyncSettings.keyPrefix);
-      const rawRemote = await getS3Json<unknown>(cloudSyncSettings, key);
+      const key = buildS3ConnectionTestKey(cloudSyncSettings.keyPrefix);
+      const probe = {
+        app: 'kuntab',
+        type: 'connection-test',
+        updatedAt: Date.now(),
+      };
+      await putS3Json(cloudSyncSettings, key, probe);
+      const rawProbe = await getS3Json<unknown>(cloudSyncSettings, key);
       const latencyMs = Math.round(performance.now() - startedAt);
-      if (!rawRemote) {
-        setCloudSyncConnectionResult({
-          ok: true,
-          latencyMs,
-          message: text.cloudSyncTestMissing,
-        });
-        showToast(text.cloudSyncTestMissing);
-        return;
+      if (
+        !rawProbe ||
+        typeof rawProbe !== 'object' ||
+        (rawProbe as { app?: string; type?: string }).app !== 'kuntab' ||
+        (rawProbe as { app?: string; type?: string }).type !== 'connection-test'
+      ) {
+        throw new Error(text.cloudSyncTestInvalidProbe);
       }
 
-      parseCloudSyncPayload(rawRemote);
       setCloudSyncConnectionResult({
         ok: true,
         latencyMs,
-        message: text.cloudSyncTestSuccess,
+        message: text.cloudSyncTestWritable,
       });
-      showToast(`${text.cloudSyncTestSuccess} (${latencyMs}ms)`);
+      showToast(`${text.cloudSyncTestWritable} (${latencyMs}ms)`);
     } catch (error) {
       const latencyMs = Math.round(performance.now() - startedAt);
       const message = error instanceof Error ? error.message : text.cloudSyncTestFailed;
-      const isPayloadError = message.includes('远端同步') || message.includes('JSON');
-      const displayMessage = isPayloadError ? text.cloudSyncTestInvalidJson : message;
       setCloudSyncConnectionResult({
-        ok: isPayloadError,
+        ok: false,
         latencyMs,
-        message: displayMessage,
+        message,
       });
-      showToast(isPayloadError ? displayMessage : `${text.cloudSyncTestFailed}: ${displayMessage}`);
+      showToast(`${text.cloudSyncTestFailed}: ${message}`);
     } finally {
       setTestingCloudSyncConnection(false);
     }

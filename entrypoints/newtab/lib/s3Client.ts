@@ -16,6 +16,12 @@ export function buildS3ObjectKey(prefix: string): string {
   return `${normalized}/kuntab-sync.json`;
 }
 
+export function buildS3ConnectionTestKey(prefix: string): string {
+  const normalized = normalizeS3KeyPrefix(prefix);
+  if (!normalized) throw new Error('Key 前缀不能为空');
+  return `${normalized}/.kuntab-connection-test.json`;
+}
+
 export function buildPathStyleObjectUrl(endpoint: string, bucket: string, key: string): URL {
   const base = endpoint.trim().replace(/\/+$/g, '');
   const normalizedBucket = bucket.trim();

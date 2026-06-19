@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildPathStyleObjectUrl, buildS3ObjectKey, normalizeS3KeyPrefix } from './s3Client';
+import {
+  buildPathStyleObjectUrl,
+  buildS3ConnectionTestKey,
+  buildS3ObjectKey,
+  normalizeS3KeyPrefix,
+} from './s3Client';
 
 describe('S3 key helpers', () => {
   it('normalizes leading and trailing slashes', () => {
@@ -12,6 +17,10 @@ describe('S3 key helpers', () => {
 
   it('builds the fixed KunTab sync object key', () => {
     expect(buildS3ObjectKey('kuntab')).toBe('kuntab/kuntab-sync.json');
+  });
+
+  it('builds the fixed KunTab connection test object key', () => {
+    expect(buildS3ConnectionTestKey('/kuntab/')).toBe('kuntab/.kuntab-connection-test.json');
   });
 
   it('builds a path-style encoded object URL', () => {
