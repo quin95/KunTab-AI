@@ -105,8 +105,20 @@ export async function getCloudSyncSettings(): Promise<CloudSyncSettings> {
 }
 
 export async function updateCloudSyncSettings(patch: Partial<CloudSyncSettings>): Promise<CloudSyncSettings> {
-  const merged = { ...(await getCloudSyncSettings()), ...patch };
+  const current = await getCloudSyncSettings();
+  const merged = { ...current, ...patch };
   await setLocal(CLOUD_SYNC_SETTINGS_KEY, merged);
+  const syncTargetChanged =
+    ('endpoint' in patch && patch.endpoint !== current.endpoint) ||
+    ('bucket' in patch && patch.bucket !== current.bucket) ||
+    ('keyPrefix' in patch && patch.keyPrefix !== current.keyPrefix);
+  if (syncTargetChanged) {
+    const metadata = await getCloudSyncMetadata();
+    await setCloudSyncMetadata({
+      ...metadata,
+      lastRemoteVersion: 0,
+    });
+  }
   return merged;
 }
 
