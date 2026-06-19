@@ -1,142 +1,142 @@
-# R2/S3 Config Sync Design
+# R2/S3 配置同步设计
 
-## Goal
+## 目标
 
-KunTab should let users manually sync the extension's own settings and favorite-site configuration across multiple computers through Cloudflare R2 or another S3-compatible object store.
+KunTab 需要支持通过 Cloudflare R2 或其他 S3 兼容对象存储，在多台电脑之间手动同步插件自身的设置和常用网站配置。
 
-Chrome bookmark data is out of scope because users can rely on Chrome account sync for bookmarks.
+Chrome 书签数据不在本功能范围内，因为用户可以直接使用 Chrome 账号同步书签。
 
-## Sync Scope
+## 同步范围
 
-The cloud sync payload includes:
+云同步内容包括：
 
-- KunTab application settings, excluding S3/R2 credentials.
-- Favorite sites as URL-based records with titles.
-- Version and device metadata needed for multi-computer conflict detection.
+- KunTab 应用设置，但不包含 S3/R2 凭证。
+- 常用网站，以 URL 为主键保存，并附带标题。
+- 用于多电脑冲突检测的版本和设备元数据。
 
-The cloud sync payload does not include:
+云同步内容不包括：
 
-- Chrome bookmark tree data.
-- Recently opened records.
-- R2/S3 endpoint credentials or secret keys.
-- AI chat history or transient UI state.
+- Chrome 书签树数据。
+- 最近打开记录。
+- R2/S3 端点凭证或 Secret Key。
+- AI 聊天历史或临时 UI 状态。
 
-Favorite sites are restored by matching each synced URL against the current browser bookmark set. If a URL does not exist locally, KunTab skips that favorite and reports how many favorites could not be restored.
+恢复常用网站时，KunTab 会用同步文件里的 URL 去匹配当前浏览器已有书签。如果某个 URL 在本机书签里不存在，则跳过该常用网站，并提示有多少条常用网站未能恢复。
 
-## S3/R2 Settings
+## S3/R2 设置
 
-Add a "Cloud Sync" settings card with the required fields only:
+在设置页新增“云同步设置”卡片，只包含必要字段：
 
-- Endpoint URL.
-- Bucket.
-- Access Key ID.
-- Secret Access Key.
-- Key prefix.
+- 端点地址。
+- Bucket。
+- Access Key ID。
+- Secret Access Key。
+- Key 前缀。
 
-The object key is derived from the prefix:
+对象 key 由前缀生成：
 
 ```text
 <keyPrefix>/kuntab-sync.json
 ```
 
-The key prefix is required so users can isolate KunTab data inside a shared bucket. Region is not exposed in the UI; the implementation can use `auto` for Cloudflare R2 and S3-compatible signing unless a future provider requires otherwise.
+Key 前缀是必填项，用于让用户在共享 bucket 中隔离 KunTab 数据。Region 不暴露在 UI 中；实现时可对 Cloudflare R2 和 S3 兼容签名使用 `auto`，除非后续某个存储服务商明确需要额外配置。
 
-Credentials stay local in extension storage and are never written into the cloud sync payload.
+凭证只保存在本地插件存储中，绝不写入云端同步文件。
 
-## Version Model
+## 版本模型
 
-Each local installation has persistent sync metadata:
+每个本地安装实例都持久化一份同步元数据：
 
-- `deviceId`: generated once per installation.
-- `localVersion`: monotonically increases whenever synced local data changes.
-- `localUpdatedAt`: timestamp of the latest synced local-data change.
-- `lastSyncedLocalVersion`: local version that was last reconciled with the cloud.
-- `lastRemoteVersion`: remote version last seen by this device.
+- `deviceId`：每个安装实例生成一次。
+- `localVersion`：每当本地同步范围内的数据发生变化时单调递增。
+- `localUpdatedAt`：最近一次本地同步数据变化的时间戳。
+- `lastSyncedLocalVersion`：本设备上次和云端完成同步时的本地版本。
+- `lastRemoteVersion`：本设备上次见到的远端版本。
 
-The remote object stores:
+远端对象保存：
 
-- `app: "kuntab"`.
-- `schemaVersion`.
-- `remoteVersion`: monotonically increases on each successful upload.
-- `updatedAt`.
-- `updatedByDeviceId`.
-- `data.settings`.
-- `data.favoriteSites`.
+- `app: "kuntab"`。
+- `schemaVersion`。
+- `remoteVersion`：每次成功上传后单调递增。
+- `updatedAt`。
+- `updatedByDeviceId`。
+- `data.settings`。
+- `data.favoriteSites`。
 
-Only changes to synced local data should bump `localVersion`. Editing S3/R2 credentials should not bump it.
+只有同步范围内的本地数据变化才递增 `localVersion`。编辑 S3/R2 凭证不应递增它。
 
-## Manual Sync Behavior
+## 手动同步行为
 
-The Backup page gets one cloud action: "Sync Now".
+备份页新增一个云端操作：“立即同步”。
 
-When clicked, KunTab:
+点击后，KunTab 会：
 
-1. Validates the S3/R2 settings.
-2. Reads the remote sync object, if it exists.
-3. Compares local and remote versions using local sync metadata.
-4. Chooses one of these outcomes:
+1. 校验 S3/R2 设置。
+2. 读取远端同步对象，如果对象存在。
+3. 基于本地同步元数据比较本地和远端版本。
+4. 根据比较结果选择以下动作之一：
 
-| Local state | Remote state | Action |
+| 本地状态 | 远端状态 | 动作 |
 | --- | --- | --- |
-| Remote missing | Any local state | Upload local data and initialize remote state. |
-| Local changed since last sync | Remote unchanged since last sync | Upload local data; increment remote version. |
-| Local unchanged since last sync | Remote changed since last sync | Download remote data and apply it locally. |
-| Local unchanged since last sync | Remote unchanged since last sync | Report "already up to date". |
-| Local changed since last sync | Remote changed since last sync | Show a conflict dialog. |
+| 远端不存在 | 任意本地状态 | 上传本地数据，并初始化远端状态。 |
+| 本地自上次同步后有变化 | 远端自上次同步后无变化 | 上传本地数据，并递增远端版本。 |
+| 本地自上次同步后无变化 | 远端自上次同步后有变化 | 下载远端数据，并应用到本地。 |
+| 本地自上次同步后无变化 | 远端自上次同步后无变化 | 提示“已是最新”。 |
+| 本地自上次同步后有变化 | 远端自上次同步后有变化 | 显示冲突处理弹窗。 |
 
-## Conflict Resolution
+## 冲突处理
 
-If both local and remote have changed since this device's last successful sync, KunTab must not auto-overwrite either side.
+如果本设备上次成功同步之后，本地和远端都发生了变化，KunTab 不能自动覆盖任何一方。
 
-The conflict dialog offers:
+冲突弹窗提供三个选项：
 
-- Use Remote: apply the remote settings and favorite-site list locally, then mark the device as synced to the current remote version.
-- Use Local: upload the current local settings and favorite-site list, increment the remote version, then mark the device as synced to the new remote version.
-- Cancel: leave both sides unchanged.
+- 使用远端：将远端设置和常用网站列表应用到本地，然后把本设备标记为已同步到当前远端版本。
+- 使用本地：上传当前本地设置和常用网站列表，递增远端版本，然后把本设备标记为已同步到新的远端版本。
+- 取消：本地和远端都保持不变。
 
-After either "Use Remote" or "Use Local", the selected side becomes the shared latest state and the local sync metadata is updated so the next click reports "already up to date".
+选择“使用远端”或“使用本地”后，被选中的一方成为共享的最新状态，同时更新本地同步元数据。下一次点击同步时，应提示“已是最新”。
 
-## Import And Export Relationship
+## 与导入导出的关系
 
-Existing local JSON/HTML backup behavior remains unchanged.
+现有本地 JSON/HTML 备份功能保持不变。
 
-Cloud sync uses a smaller sync-specific JSON format rather than the full `BackupData` format because the full backup includes Chrome bookmark tree data, which should not be synced through R2/S3.
+云同步使用更小的同步专用 JSON 格式，而不是当前完整的 `BackupData` 格式，因为完整备份包含 Chrome 书签树，而书签树不应该通过 R2/S3 同步。
 
-## Error Handling
+## 错误处理
 
-KunTab should show clear toasts for:
+KunTab 需要用清晰的 toast 提示以下情况：
 
-- Missing S3/R2 settings.
-- Remote object not found and initialized.
-- Upload success.
-- Download success.
-- Already up to date.
-- Conflict detected.
-- Signature, network, CORS, permission, or malformed JSON failures.
-- Favorite URLs skipped because matching Chrome bookmarks are missing locally.
+- S3/R2 设置缺失。
+- 远端对象不存在，并已完成初始化。
+- 上传成功。
+- 下载成功。
+- 已是最新。
+- 检测到冲突。
+- 签名、网络、CORS、权限或 JSON 格式错误。
+- 因本机缺少匹配的 Chrome 书签，部分常用网站被跳过。
 
-Failed sync operations must not update local sync metadata.
+同步失败时不能更新本地同步元数据。
 
-## Implementation Notes
+## 实现说明
 
-Use browser-native `fetch` and AWS Signature Version 4 signing through Web Crypto instead of adding an AWS SDK dependency.
+使用浏览器原生 `fetch` 和基于 Web Crypto 的 AWS Signature Version 4 签名，不新增 AWS SDK 依赖。
 
-The first implementation targets path-style requests, which are appropriate for Cloudflare R2 and many S3-compatible services:
+第一版实现采用 path-style 请求，这适用于 Cloudflare R2 和很多 S3 兼容服务：
 
 ```text
 <endpoint>/<bucket>/<key>
 ```
 
-If another S3-compatible provider requires virtual-host style URLs later, that can be added as a separate provider option.
+如果后续某个 S3 兼容服务商需要 virtual-host style URL，可以再单独增加服务商选项。
 
-## Testing
+## 测试
 
-Add focused unit coverage for:
+增加聚焦的单元测试覆盖：
 
-- Sync direction decisions.
-- Conflict detection.
-- Remote payload validation.
-- URL-based favorite restoration.
-- S3 object key normalization.
+- 同步方向判断。
+- 冲突检测。
+- 远端 payload 校验。
+- 基于 URL 的常用网站恢复。
+- S3 对象 key 规范化。
 
-Run the TypeScript compiler after implementation.
+实现完成后运行 TypeScript 编译检查。
