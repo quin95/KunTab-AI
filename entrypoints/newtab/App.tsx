@@ -1321,7 +1321,6 @@ export default function App() {
         latencyMs,
         message: text.cloudSyncTestWritable,
       });
-      showToast(`${text.cloudSyncTestWritable} (${latencyMs}ms)`);
     } catch (error) {
       const latencyMs = Math.round(performance.now() - startedAt);
       const message = error instanceof Error ? error.message : text.cloudSyncTestFailed;
@@ -1330,7 +1329,6 @@ export default function App() {
         latencyMs,
         message,
       });
-      showToast(`${text.cloudSyncTestFailed}: ${message}`);
     } finally {
       setTestingCloudSyncConnection(false);
     }

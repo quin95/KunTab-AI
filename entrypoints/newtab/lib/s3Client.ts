@@ -140,12 +140,69 @@ async function buildSignedHeaders(params: {
   return requestHeaders;
 }
 
-async function readErrorResponse(response: Response): Promise<string> {
+function readXmlTag(text: string, tag: string): string {
+  const match = text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'i'));
+  return match?.[1]?.trim() ?? '';
+}
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+function getFriendlyS3ErrorMessage(code: string, message: string): string {
+  const accessKeyLength = message.match(/Credential access key has length (\d+), should be (\d+)/i);
+  if (accessKeyLength) {
+    const [, actual, expected] = accessKeyLength;
+    return `Access Key ID 格式不正确：应为 ${expected} 位，当前是 ${actual} 位，请检查是否多复制或少复制了字符。`;
+  }
+
+  if (code === 'InvalidAccessKeyId') {
+    return 'Access Key ID 无效，请检查 R2/S3 访问密钥是否填写正确。';
+  }
+  if (code === 'SignatureDoesNotMatch') {
+    return 'Secret Access Key 不匹配，请检查密钥是否复制完整，且没有多余空格。';
+  }
+  if (code === 'AccessDenied') {
+    return '访问被拒绝，请确认该密钥有当前 Bucket 和 Key 前缀的读写权限。';
+  }
+  if (code === 'NoSuchBucket') {
+    return 'Bucket 不存在，请检查 Bucket 名称和端点地址是否匹配。';
+  }
+  if (code === 'InvalidArgument') {
+    return message ? `参数不正确：${message}` : '参数不正确，请检查云同步配置。';
+  }
+
+  return '';
+}
+
+export function formatS3ErrorMessage(method: 'GET' | 'PUT', status: number, body: string): string {
+  const trimmedBody = body.trim();
+  const code = decodeXmlEntities(readXmlTag(trimmedBody, 'Code'));
+  const message = decodeXmlEntities(readXmlTag(trimmedBody, 'Message'));
+  const friendlyMessage = getFriendlyS3ErrorMessage(code, message);
+
+  if (friendlyMessage) {
+    return `${friendlyMessage}（S3 ${method} ${status}${code ? `，${code}` : ''}）`;
+  }
+
+  if (code || message) {
+    return `S3 ${method} ${status}：${[code, message].filter(Boolean).join(' - ')}`;
+  }
+
+  return `S3 ${method} ${status}${trimmedBody ? `：${trimmedBody}` : ''}`;
+}
+
+async function readErrorResponse(method: 'GET' | 'PUT', response: Response): Promise<string> {
   try {
     const text = await response.text();
-    return text ? `: ${text}` : '';
+    return formatS3ErrorMessage(method, response.status, text);
   } catch {
-    return '';
+    return `S3 ${method} ${response.status}`;
   }
 }
 
@@ -164,7 +221,7 @@ export async function getS3Json<T>(settings: CloudSyncSettings, key: string): Pr
 
   if (response.status === 404) return null;
   if (!response.ok) {
-    throw new Error(`S3 GET ${response.status}${await readErrorResponse(response)}`);
+    throw new Error(await readErrorResponse('GET', response));
   }
   return (await response.json()) as T;
 }
@@ -186,6 +243,6 @@ export async function putS3Json(settings: CloudSyncSettings, key: string, value:
   });
 
   if (!response.ok) {
-    throw new Error(`S3 PUT ${response.status}${await readErrorResponse(response)}`);
+    throw new Error(await readErrorResponse('PUT', response));
   }
 }
