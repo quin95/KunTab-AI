@@ -1665,6 +1665,11 @@ select:focus {
   color: var(--success);
 }
 
+.backup-card-icon-container.cloud-blue {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
 .backup-card h3 {
   font-size: 1.35rem;
   font-weight: 700;
@@ -2126,6 +2131,24 @@ select:focus {
   border-radius: 12px;
   padding: 0.5rem 2rem;
   font-weight: 500;
+}
+
+.cloud-sync-conflict-desc {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.cloud-sync-conflict-meta {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 /* ==========================================================================

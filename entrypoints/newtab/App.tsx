@@ -7,16 +7,24 @@ import type {
   FolderOption,
   NavTab,
   ChatMessage,
+  CloudSyncConflictChoice,
+  CloudSyncPayload,
 } from './models';
 import {
   clearAppCache,
+  DEFAULT_CLOUD_SYNC_SETTINGS,
   DEFAULT_SETTINGS,
+  getCloudSyncMetadata,
+  getCloudSyncSettings,
   getFavorites,
   getRecentOpens,
   getSettings,
   pushRecentOpen,
+  replaceFromCloudSync,
   setFavorites,
+  setCloudSyncMetadata,
   updateSettings,
+  updateCloudSyncSettings,
   watchSettings,
   setRecentOpensStorage,
   getStorageSize,
@@ -47,6 +55,14 @@ import {
   parseBackupJson,
   resolveBackupFavorites,
 } from './lib/backup';
+import {
+  buildCloudSyncPayload,
+  collectCloudFavoriteSites,
+  decideCloudSyncDirection,
+  parseCloudSyncPayload,
+  resolveCloudFavoriteSites,
+} from './lib/cloudSync';
+import { buildS3ObjectKey, getS3Json, putS3Json } from './lib/s3Client';
 import { getEngineById, parseSearchCommand, SEARCH_ENGINES } from './lib/search';
 import { faviconOf, formatDateTime, formatRelativeTime, greetingByTime, hostnameOf } from './lib/utils';
 import {
@@ -79,6 +95,7 @@ import {
   ChevronRight,
   ChevronDown,
   Check,
+  Cloud,
   ExternalLink,
   Image,
   Sparkles,
@@ -89,6 +106,7 @@ import {
   Send,
   Square,
   ArrowUp,
+  RefreshCw,
   SendHorizontal,
 } from 'lucide-react';
 import { testAi, chat } from './lib/ai';
@@ -130,7 +148,7 @@ const LOCALE_TEXT = {
     searchHint: '支持书签搜索和命令搜索（g/bd/b/gh/ai/yt）',
     searchPlaceholder: '搜索书签或输入命令，快速访问或搜索全网...',
     search: '搜索',
-    favorites: '常用网站',
+    favorites: '常用书签',
     manageFavorites: '管理常用',
     remove: '移除',
     addSite: '添加网站',
@@ -155,8 +173,28 @@ const LOCALE_TEXT = {
     backupExportTitle: '导出备份',
     backupExportDesc: '将当前所有书签配置导出为 JSON 文件',
     backupTip1: '包含所有文件夹和书签',
-    backupTip2: '包含常用网站配置和设置项',
+    backupTip2: '包含常用书签配置和设置项',
     backupTip3: '可用于备份或迁移到其他浏览器',
+    cloudSyncTitle: '云同步',
+    cloudSyncDesc: '使用 R2/S3 兼容存储同步 KunTab 设置和常用书签',
+    cloudSyncNow: '立即同步',
+    cloudSyncing: '同步中...',
+    cloudSyncSettingsTitle: '云同步设置',
+    cloudSyncEndpoint: '端点地址',
+    cloudSyncEndpointDesc: 'R2/S3 兼容对象存储的 endpoint 地址',
+    cloudSyncBucket: 'Bucket',
+    cloudSyncBucketDesc: '保存 KunTab 同步文件的存储桶名称',
+    cloudSyncAccessKeyId: 'Access Key ID',
+    cloudSyncAccessKeyIdDesc: '用于访问存储桶的访问密钥 ID',
+    cloudSyncSecretAccessKey: 'Secret Access Key',
+    cloudSyncSecretAccessKeyDesc: '仅保存在本机，不会写入云端同步文件',
+    cloudSyncKeyPrefix: 'Key 前缀',
+    cloudSyncKeyPrefixDesc: '必填，用于隔离 KunTab 数据，例如 kuntab',
+    cloudSyncConflictTitle: '检测到同步冲突',
+    cloudSyncConflictDesc: '本地和远端自上次同步后都发生了变化，请选择保留哪一侧。',
+    cloudSyncUseRemote: '使用远端',
+    cloudSyncUseLocal: '使用本地',
+    cloudSyncCancel: '取消同步',
     exportJson: '导出为 JSON 文件',
     exportHtml: '导出为 HTML 文件',
     backupImportTitle: '导入备份',
@@ -165,7 +203,7 @@ const LOCALE_TEXT = {
     chooseJson: '选择 JSON 文件',
     importing: '导入中...',
     importLimit: '支持 .json 格式文件，最大 10MB',
-    backupNotice: '备份文件将保存到你的本地设备，请妥善保管。当前版本不会上传或保存备份记录，所有备份操作均在本地完成。',
+    backupNotice: '本地备份文件会保存到你的设备；云同步仅在点击“立即同步”时连接你配置的 R2/S3 存储，并且不会同步 Chrome 书签树。',
     generalSettings: '通用设置',
     language: '语言',
     defaultEngine: '默认搜索引擎',
@@ -190,7 +228,7 @@ const LOCALE_TEXT = {
     folder: '所属文件夹',
     cancel: '取消',
     save: '保存',
-    addFavoriteSite: '添加常用网站',
+    addFavoriteSite: '添加常用书签',
     favoriteSearchPlaceholder: '搜索书签标题或网址',
     noSitesToAdd: '没有可添加的书签',
     close: '关闭',
@@ -293,6 +331,26 @@ const LOCALE_TEXT = {
     backupTip1: 'Includes all folders and bookmarks',
     backupTip2: 'Includes favorites and settings',
     backupTip3: 'Can be used to migrate to another browser',
+    cloudSyncTitle: 'Cloud Sync',
+    cloudSyncDesc: 'Sync KunTab settings and favorites through R2/S3-compatible storage',
+    cloudSyncNow: 'Sync Now',
+    cloudSyncing: 'Syncing...',
+    cloudSyncSettingsTitle: 'Cloud Sync Settings',
+    cloudSyncEndpoint: 'Endpoint URL',
+    cloudSyncEndpointDesc: 'Endpoint for your R2/S3-compatible object storage',
+    cloudSyncBucket: 'Bucket',
+    cloudSyncBucketDesc: 'Bucket that stores the KunTab sync file',
+    cloudSyncAccessKeyId: 'Access Key ID',
+    cloudSyncAccessKeyIdDesc: 'Access key ID for the bucket',
+    cloudSyncSecretAccessKey: 'Secret Access Key',
+    cloudSyncSecretAccessKeyDesc: 'Stored locally only and never uploaded to cloud sync data',
+    cloudSyncKeyPrefix: 'Key Prefix',
+    cloudSyncKeyPrefixDesc: 'Required namespace for KunTab data, for example kuntab',
+    cloudSyncConflictTitle: 'Sync Conflict Detected',
+    cloudSyncConflictDesc: 'Both local and remote data changed since the last sync. Choose which side to keep.',
+    cloudSyncUseRemote: 'Use Remote',
+    cloudSyncUseLocal: 'Use Local',
+    cloudSyncCancel: 'Cancel Sync',
     exportJson: 'Export JSON',
     exportHtml: 'Export HTML',
     backupImportTitle: 'Import Backup',
@@ -301,7 +359,7 @@ const LOCALE_TEXT = {
     chooseJson: 'Choose JSON File',
     importing: 'Importing...',
     importLimit: 'Supports .json files, recommended up to 10MB',
-    backupNotice: 'Backup files are stored locally. Keep them safe. No server upload in this version.',
+    backupNotice: 'Local backup files stay on this device. Cloud sync connects to your configured R2/S3 storage only when you click Sync Now, and it does not sync the Chrome bookmark tree.',
     generalSettings: 'General Settings',
     language: 'Language',
     defaultEngine: 'Default Search Engine',
@@ -435,6 +493,9 @@ export default function App() {
 
   const [backupFolderId, setBackupFolderId] = useState('');
   const [importing, setImporting] = useState(false);
+  const [cloudSyncSettings, setCloudSyncSettingsState] = useState(DEFAULT_CLOUD_SYNC_SETTINGS);
+  const [cloudSyncing, setCloudSyncing] = useState(false);
+  const [cloudSyncConflict, setCloudSyncConflict] = useState<CloudSyncPayload | null>(null);
 
   // Pagination State
   const [pageSize, setPageSize] = useState(20);
@@ -527,16 +588,18 @@ export default function App() {
   };
 
   const reloadStorage = async () => {
-    const [savedSettings, savedFavorites, recent, size] = await Promise.all([
+    const [savedSettings, savedFavorites, recent, size, savedCloudSyncSettings] = await Promise.all([
       getSettings(),
       getFavorites(),
       getRecentOpens(),
       getStorageSize(),
+      getCloudSyncSettings(),
     ]);
     setSettingsState(savedSettings);
     setFavoritesState(savedFavorites.favorites);
     setRecentOpens(recent);
     setCacheSize(size);
+    setCloudSyncSettingsState(savedCloudSyncSettings);
 
     if (savedSettings.startPage === 'bookmarks') {
       setActiveTab('bookmarks');
@@ -945,6 +1008,11 @@ export default function App() {
     setSettingsState(next);
   };
 
+  const saveCloudSyncSettingsPatch = async (patch: Partial<typeof DEFAULT_CLOUD_SYNC_SETTINGS>) => {
+    const next = await updateCloudSyncSettings(patch);
+    setCloudSyncSettingsState(next);
+  };
+
   const syncFavorites = async (next: string[]) => {
     setFavoritesState(next);
     await setFavorites({ favorites: next });
@@ -1132,6 +1200,112 @@ export default function App() {
 
     downloadHtmlBackup(backup);
     showToast(text.exportedHtml);
+  };
+
+  const uploadCloudSyncState = async (previousRemoteVersion: number) => {
+    const metadata = await getCloudSyncMetadata();
+    const key = buildS3ObjectKey(cloudSyncSettings.keyPrefix);
+    const favoriteSites = collectCloudFavoriteSites(favorites, allBookmarks);
+    const payload = buildCloudSyncPayload({
+      settings,
+      favoriteSites,
+      metadata,
+      previousRemoteVersion,
+    });
+    await putS3Json(cloudSyncSettings, key, payload);
+    await setCloudSyncMetadata({
+      ...metadata,
+      lastSyncedLocalVersion: metadata.localVersion,
+      lastRemoteVersion: payload.remoteVersion,
+    });
+    setCacheSize(await getStorageSize());
+    return payload;
+  };
+
+  const applyRemoteCloudSyncState = async (payload: CloudSyncPayload) => {
+    const resolved = resolveCloudFavoriteSites(payload.data.favoriteSites, allBookmarks);
+    await replaceFromCloudSync(payload.data.settings, resolved.favorites);
+    const metadata = await getCloudSyncMetadata();
+    await setCloudSyncMetadata({
+      ...metadata,
+      localUpdatedAt: Date.now(),
+      lastSyncedLocalVersion: metadata.localVersion,
+      lastRemoteVersion: payload.remoteVersion,
+    });
+    await reloadStorage();
+    return resolved.skipped;
+  };
+
+  const onCloudSyncNow = async () => {
+    try {
+      setCloudSyncing(true);
+      const key = buildS3ObjectKey(cloudSyncSettings.keyPrefix);
+      const metadata = await getCloudSyncMetadata();
+      const rawRemote = await getS3Json<unknown>(cloudSyncSettings, key);
+      const remote = rawRemote ? parseCloudSyncPayload(rawRemote) : null;
+      const direction = decideCloudSyncDirection(metadata, remote);
+
+      if (direction === 'upload-initialize' || direction === 'upload') {
+        const payload = await uploadCloudSyncState(remote?.remoteVersion ?? 0);
+        showToast(
+          direction === 'upload-initialize'
+            ? `云端同步已初始化 v${payload.remoteVersion}`
+            : `已上传到云端 v${payload.remoteVersion}`,
+        );
+        return;
+      }
+
+      if (direction === 'download' && remote) {
+        const skipped = await applyRemoteCloudSyncState(remote);
+        showToast(
+          skipped > 0
+            ? `已从云端同步 v${remote.remoteVersion}，${skipped} 个常用书签因本机书签缺失被跳过`
+            : `已从云端同步 v${remote.remoteVersion}`,
+        );
+        return;
+      }
+
+      if (direction === 'noop') {
+        showToast('云端和本地已是最新');
+        return;
+      }
+
+      if (direction === 'conflict' && remote) {
+        setCloudSyncConflict(remote);
+        showToast('检测到多设备同步冲突，请选择保留哪一侧');
+      }
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '云同步失败');
+    } finally {
+      setCloudSyncing(false);
+    }
+  };
+
+  const resolveCloudSyncConflict = async (choice: CloudSyncConflictChoice) => {
+    if (!cloudSyncConflict || choice === 'cancel') {
+      setCloudSyncConflict(null);
+      return;
+    }
+
+    try {
+      setCloudSyncing(true);
+      if (choice === 'remote') {
+        const skipped = await applyRemoteCloudSyncState(cloudSyncConflict);
+        showToast(
+          skipped > 0
+            ? `已使用远端版本 v${cloudSyncConflict.remoteVersion}，${skipped} 个常用书签因本机书签缺失被跳过`
+            : `已使用远端版本 v${cloudSyncConflict.remoteVersion}`,
+        );
+      } else {
+        const payload = await uploadCloudSyncState(cloudSyncConflict.remoteVersion);
+        showToast(`已使用本地配置覆盖远端 v${payload.remoteVersion}`);
+      }
+      setCloudSyncConflict(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '冲突处理失败');
+    } finally {
+      setCloudSyncing(false);
+    }
   };
 
   const onClearLocalCache = async () => {
@@ -2152,6 +2326,28 @@ ${serializedContext}
                 </label>
                 <div className="import-subtext">{text.importLimit}</div>
               </article>
+
+              <article className="backup-card">
+                <div className="backup-card-icon-container cloud-blue">
+                  <Cloud size={32} />
+                </div>
+                <h3>{text.cloudSyncTitle}</h3>
+                <p className="backup-card-desc">{text.cloudSyncDesc}</p>
+                <div className="backup-features-list">
+                  <div className="backup-feature-item export-item">
+                    <Check size={16} />
+                    <span>{text.cloudSyncSettingsTitle}</span>
+                  </div>
+                  <div className="backup-feature-item export-item">
+                    <Check size={16} />
+                    <span>{text.cloudSyncConflictTitle}</span>
+                  </div>
+                </div>
+                <button className="primary backup-btn export-btn" onClick={onCloudSyncNow} disabled={cloudSyncing}>
+                  {cloudSyncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                  {cloudSyncing ? text.cloudSyncing : text.cloudSyncNow}
+                </button>
+              </article>
             </div>
 
             <div className="note-box">
@@ -2682,6 +2878,89 @@ ${serializedContext}
             </article>
 
             <article className="settings-card">
+              <h3>{text.cloudSyncSettingsTitle}</h3>
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Globe size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncEndpoint}</span>
+                    <span className="setting-desc">{text.cloudSyncEndpointDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="https://<account>.r2.cloudflarestorage.com"
+                  value={cloudSyncSettings.endpoint}
+                  onChange={(event) => saveCloudSyncSettingsPatch({ endpoint: event.target.value.trim() })}
+                />
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Cloud size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncBucket}</span>
+                    <span className="setting-desc">{text.cloudSyncBucketDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="backup"
+                  value={cloudSyncSettings.bucket}
+                  onChange={(event) => saveCloudSyncSettingsPatch({ bucket: event.target.value.trim() })}
+                />
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Type size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncAccessKeyId}</span>
+                    <span className="setting-desc">{text.cloudSyncAccessKeyIdDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Access Key ID"
+                  value={cloudSyncSettings.accessKeyId}
+                  onChange={(event) => saveCloudSyncSettingsPatch({ accessKeyId: event.target.value.trim() })}
+                />
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Settings size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncSecretAccessKey}</span>
+                    <span className="setting-desc">{text.cloudSyncSecretAccessKeyDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••"
+                  value={cloudSyncSettings.secretAccessKey}
+                  onChange={(event) => saveCloudSyncSettingsPatch({ secretAccessKey: event.target.value })}
+                />
+              </div>
+
+              <div className="settings-row">
+                <div className="setting-left">
+                  <div className="setting-icon-wrap"><Folder size={18} /></div>
+                  <div className="setting-meta">
+                    <span className="setting-title">{text.cloudSyncKeyPrefix}</span>
+                    <span className="setting-desc">{text.cloudSyncKeyPrefixDesc}</span>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="kuntab"
+                  value={cloudSyncSettings.keyPrefix}
+                  onChange={(event) => saveCloudSyncSettingsPatch({ keyPrefix: event.target.value.trim() })}
+                />
+              </div>
+            </article>
+
+            <article className="settings-card">
               <h3>{text.misc}</h3>
               <div className="settings-row">
                 <div className="setting-left">
@@ -2744,6 +3023,35 @@ ${serializedContext}
           </section>
         )}
       </main>
+
+      {/* Cloud Sync Conflict Modal */}
+      {cloudSyncConflict && (
+        <div className="modal-mask" onClick={() => resolveCloudSyncConflict('cancel')}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{text.cloudSyncConflictTitle}</h3>
+            </div>
+            <div className="modal-body">
+              <p className="cloud-sync-conflict-desc">{text.cloudSyncConflictDesc}</p>
+              <div className="cloud-sync-conflict-meta">
+                <span>Remote v{cloudSyncConflict.remoteVersion}</span>
+                <span>{formatDateTime(cloudSyncConflict.updatedAt)}</span>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => resolveCloudSyncConflict('cancel')} disabled={cloudSyncing}>
+                {text.cloudSyncCancel}
+              </button>
+              <button onClick={() => resolveCloudSyncConflict('remote')} disabled={cloudSyncing}>
+                {text.cloudSyncUseRemote}
+              </button>
+              <button className="primary" onClick={() => resolveCloudSyncConflict('local')} disabled={cloudSyncing}>
+                {text.cloudSyncUseLocal}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Bookmark Modal */}
       {editTarget && (
