@@ -579,6 +579,12 @@ export default function App() {
   const engineIconUrl = (engineId: string) =>
     `https://www.google.com/s2/favicons?domain=${SEARCH_ENGINE_HOSTS[engineId] ?? 'google.com'}&sz=32`;
 
+  const truncateUrl = (url?: string) => {
+    if (!url) return '默认';
+    if (url.length <= 40) return url;
+    return url.substring(0, 20) + '...' + url.substring(url.length - 17);
+  };
+
   const navTitle = (tab: NavTab) => {
     switch (tab) {
       case 'home':
@@ -3190,12 +3196,12 @@ ${serializedContext}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className={localSyncMetadata?.localVersion !== cloudSyncConflict.remoteVersion ? 'diff-highlight' : ''}>
+                  <tr>
                     <td>同步版本 (Version)</td>
                     <td>v{localSyncMetadata?.localVersion ?? '未知'}</td>
                     <td>v{cloudSyncConflict.remoteVersion}</td>
                   </tr>
-                  <tr className={localSyncMetadata?.localUpdatedAt !== cloudSyncConflict.updatedAt ? 'diff-highlight' : ''}>
+                  <tr>
                     <td>更新时间 (Updated At)</td>
                     <td>{localSyncMetadata?.localUpdatedAt ? formatDateTime(localSyncMetadata.localUpdatedAt) : '未知'}</td>
                     <td>{formatDateTime(cloudSyncConflict.updatedAt)}</td>
@@ -3231,8 +3237,28 @@ ${serializedContext}
                   </tr>
                   <tr className={(settings.customBgUrl || '') !== (cloudSyncConflict.data.settings.customBgUrl || '') ? 'diff-highlight' : ''}>
                     <td>背景壁纸 (Wallpaper)</td>
-                    <td>{settings.customBgUrl ? '已配置自定义' : '默认'}</td>
-                    <td>{cloudSyncConflict.data.settings.customBgUrl ? '已配置自定义' : '默认'}</td>
+                    <td>{truncateUrl(settings.customBgUrl)}</td>
+                    <td>{truncateUrl(cloudSyncConflict.data.settings.customBgUrl)}</td>
+                  </tr>
+                  <tr className={settings.aiProvider !== cloudSyncConflict.data.settings.aiProvider ? 'diff-highlight' : ''}>
+                    <td>AI 服务商 (AI Provider)</td>
+                    <td>{settings.aiProvider === 'none' ? '未启用' : settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</td>
+                    <td>{cloudSyncConflict.data.settings.aiProvider === 'none' ? '未启用' : cloudSyncConflict.data.settings.aiProvider === 'openai' ? 'OpenAI' : 'Anthropic'}</td>
+                  </tr>
+                  <tr className={((settings.aiProvider !== 'none' || cloudSyncConflict.data.settings.aiProvider !== 'none') && settings.aiModel !== cloudSyncConflict.data.settings.aiModel) ? 'diff-highlight' : ''}>
+                    <td>AI 模型 (AI Model)</td>
+                    <td>{settings.aiProvider === 'none' ? '-' : settings.aiModel}</td>
+                    <td>{cloudSyncConflict.data.settings.aiProvider === 'none' ? '-' : cloudSyncConflict.data.settings.aiModel}</td>
+                  </tr>
+                  <tr className={(settings.aiBaseUrl || '') !== (cloudSyncConflict.data.settings.aiBaseUrl || '') ? 'diff-highlight' : ''}>
+                    <td>AI 接口地址 (AI Base URL)</td>
+                    <td>{settings.aiBaseUrl ? truncateUrl(settings.aiBaseUrl) : '默认'}</td>
+                    <td>{cloudSyncConflict.data.settings.aiBaseUrl ? truncateUrl(cloudSyncConflict.data.settings.aiBaseUrl) : '默认'}</td>
+                  </tr>
+                  <tr className={Boolean(settings.aiApiKey) !== Boolean(cloudSyncConflict.data.settings.aiApiKey) ? 'diff-highlight' : ''}>
+                    <td>AI 密钥 (AI API Key)</td>
+                    <td>{settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}</td>
+                    <td>{cloudSyncConflict.data.settings.aiApiKey ? '已配置 (••••••••)' : '未配置'}</td>
                   </tr>
                 </tbody>
               </table>
