@@ -9,6 +9,7 @@ import type {
   ChatMessage,
   CloudSyncConflictChoice,
   CloudSyncPayload,
+  CloudSyncMetadata,
 } from './models';
 import {
   clearAppCache,
@@ -519,6 +520,7 @@ export default function App() {
   const [cloudSyncSettings, setCloudSyncSettingsState] = useState(DEFAULT_CLOUD_SYNC_SETTINGS);
   const [cloudSyncing, setCloudSyncing] = useState(false);
   const [cloudSyncConflict, setCloudSyncConflict] = useState<CloudSyncPayload | null>(null);
+  const [localSyncMetadata, setLocalSyncMetadata] = useState<CloudSyncMetadata | null>(null);
   const [testingCloudSyncConnection, setTestingCloudSyncConnection] = useState(false);
   const [cloudSyncConnectionResult, setCloudSyncConnectionResult] = useState<{ ok: boolean; latencyMs: number; message: string } | null>(null);
 
@@ -1296,6 +1298,7 @@ export default function App() {
       }
 
       if (direction === 'conflict' && remote) {
+        setLocalSyncMetadata(metadata);
         setCloudSyncConflict(remote);
         showToast('检测到多设备同步冲突，请选择保留哪一侧');
       }
@@ -1350,6 +1353,7 @@ export default function App() {
   const resolveCloudSyncConflict = async (choice: CloudSyncConflictChoice) => {
     if (!cloudSyncConflict || choice === 'cancel') {
       setCloudSyncConflict(null);
+      setLocalSyncMetadata(null);
       return;
     }
 
@@ -1367,6 +1371,7 @@ export default function App() {
         showToast(`已使用本地配置覆盖远端 v${payload.remoteVersion}`);
       }
       setCloudSyncConflict(null);
+      setLocalSyncMetadata(null);
     } catch (error) {
       showToast(error instanceof Error ? error.message : '冲突处理失败');
     } finally {
@@ -3169,16 +3174,68 @@ ${serializedContext}
       {/* Cloud Sync Conflict Modal */}
       {cloudSyncConflict && (
         <div className="modal-mask" onClick={() => resolveCloudSyncConflict('cancel')}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+          <div className="modal-card large" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3>{text.cloudSyncConflictTitle}</h3>
             </div>
             <div className="modal-body">
               <p className="cloud-sync-conflict-desc">{text.cloudSyncConflictDesc}</p>
-              <div className="cloud-sync-conflict-meta">
-                <span>Remote v{cloudSyncConflict.remoteVersion}</span>
-                <span>{formatDateTime(cloudSyncConflict.updatedAt)}</span>
-              </div>
+              
+              <table className="sync-diff-table">
+                <thead>
+                  <tr>
+                    <th>属性</th>
+                    <th>本地配置 (Local)</th>
+                    <th>云端配置 (Remote)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className={localSyncMetadata?.localVersion !== cloudSyncConflict.remoteVersion ? 'diff-highlight' : ''}>
+                    <td>同步版本 (Version)</td>
+                    <td>v{localSyncMetadata?.localVersion ?? '未知'}</td>
+                    <td>v{cloudSyncConflict.remoteVersion}</td>
+                  </tr>
+                  <tr className={localSyncMetadata?.localUpdatedAt !== cloudSyncConflict.updatedAt ? 'diff-highlight' : ''}>
+                    <td>更新时间 (Updated At)</td>
+                    <td>{localSyncMetadata?.localUpdatedAt ? formatDateTime(localSyncMetadata.localUpdatedAt) : '未知'}</td>
+                    <td>{formatDateTime(cloudSyncConflict.updatedAt)}</td>
+                  </tr>
+                  <tr className={favorites.length !== cloudSyncConflict.data.favoriteSites.length ? 'diff-highlight' : ''}>
+                    <td>常用书签 (Favorites)</td>
+                    <td>{favorites.length} 个书签</td>
+                    <td>{cloudSyncConflict.data.favoriteSites.length} 个书签</td>
+                  </tr>
+                  <tr className={settings.theme !== cloudSyncConflict.data.settings.theme ? 'diff-highlight' : ''}>
+                    <td>主题外观 (Theme)</td>
+                    <td>
+                      {settings.theme === 'light' ? '浅色' : settings.theme === 'dark' ? '深色' : '跟随系统'}
+                    </td>
+                    <td>
+                      {cloudSyncConflict.data.settings.theme === 'light' ? '浅色' : cloudSyncConflict.data.settings.theme === 'dark' ? '深色' : '跟随系统'}
+                    </td>
+                  </tr>
+                  <tr className={settings.searchEngine !== cloudSyncConflict.data.settings.searchEngine ? 'diff-highlight' : ''}>
+                    <td>默认引擎 (Engine)</td>
+                    <td>{settings.searchEngine}</td>
+                    <td>{cloudSyncConflict.data.settings.searchEngine}</td>
+                  </tr>
+                  <tr className={settings.startPage !== cloudSyncConflict.data.settings.startPage ? 'diff-highlight' : ''}>
+                    <td>启动主页 (Start Page)</td>
+                    <td>{settings.startPage === 'home' ? '导航主页' : '原生书签'}</td>
+                    <td>{cloudSyncConflict.data.settings.startPage === 'home' ? '导航主页' : '原生书签'}</td>
+                  </tr>
+                  <tr className={settings.language !== cloudSyncConflict.data.settings.language ? 'diff-highlight' : ''}>
+                    <td>界面语言 (Language)</td>
+                    <td>{settings.language === 'zh-CN' ? '简体中文' : 'English'}</td>
+                    <td>{cloudSyncConflict.data.settings.language === 'zh-CN' ? '简体中文' : 'English'}</td>
+                  </tr>
+                  <tr className={(settings.customBgUrl || '') !== (cloudSyncConflict.data.settings.customBgUrl || '') ? 'diff-highlight' : ''}>
+                    <td>背景壁纸 (Wallpaper)</td>
+                    <td>{settings.customBgUrl ? '已配置自定义' : '默认'}</td>
+                    <td>{cloudSyncConflict.data.settings.customBgUrl ? '已配置自定义' : '默认'}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <div className="modal-actions">
               <button onClick={() => resolveCloudSyncConflict('cancel')} disabled={cloudSyncing}>

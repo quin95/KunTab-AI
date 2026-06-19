@@ -4423,3 +4423,90 @@ select:focus {
   color: var(--primary);
   font-weight: bold;
 }
+
+/* ==========================================================================
+   Cloud Sync Conflict Difference Table
+   ========================================================================== */
+
+.cloud-sync-conflict-desc {
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.5;
+  text-align: left;
+}
+
+.sync-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.sync-diff-table th,
+.sync-diff-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.sync-diff-table th {
+  font-weight: 750;
+  color: var(--text);
+  background: var(--bg);
+  border-bottom: 2px solid var(--line);
+}
+
+.sync-diff-table td {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.sync-diff-table tr.diff-highlight td {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.sync-diff-table tr.diff-highlight td:nth-child(2),
+.sync-diff-table tr.diff-highlight td:nth-child(3) {
+  font-weight: 700;
+}
+
+/* Glassmorphism support on scenic bg */
+.app-shell.has-scenic-bg .sync-diff-table {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.app-shell.has-scenic-bg .sync-diff-table th {
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--text);
+}
+
+.app-shell.has-scenic-bg .sync-diff-table td {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.app-shell.has-scenic-bg .sync-diff-table tr.diff-highlight td {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table th {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table td {
+  background: rgba(30, 41, 59, 0.3);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table tr.diff-highlight td {
+  background: rgba(245, 158, 11, 0.25);
+}
