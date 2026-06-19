@@ -90,6 +90,7 @@ KunTab turns your browser's default New Tab page into an elegant, powerful dashb
 ### 💾 Safe Backup & Restoration
 - **JSON Backup**: Export all custom bookmarks, folder hierarchies, dashboard settings, and quick links into a single secure file.
 - **HTML Export**: Standalone bookmark export compatible with standard browsers.
+- **R2/S3 Cloud Sync**: Configure Cloudflare R2 or standard S3-compatible object storage to manually sync KunTab settings and frequently used bookmarks; the native bookmark tree remains synchronized by the browser profile.
 - **Smart Import**: Import your backup file without breaking your setup. The built-in duplicate-handling mechanism skips duplicate URLs automatically instead of wiping out existing configurations.
 - Safety checks protecting user configurations from corrupted files (up to 10MB file limit).
 
