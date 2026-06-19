@@ -4425,88 +4425,160 @@ select:focus {
 }
 
 /* ==========================================================================
-   Cloud Sync Conflict Difference Table
+   Cloud Sync Conflict Difference Modal Refined Styling
    ========================================================================== */
 
-.cloud-sync-conflict-desc {
-  margin-bottom: 1rem;
-  font-size: 0.88rem;
-  color: var(--muted);
-  line-height: 1.5;
-  text-align: left;
+.conflict-modal-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
-.sync-diff-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-  margin-bottom: 1.5rem;
-  font-size: 0.85rem;
+.conflict-groups-scroll {
+  max-height: 380px;
+  overflow-y: auto;
+  padding-right: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.conflict-group-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.conflict-group-card h4 {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 0.5rem;
+}
+
+.conflict-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.conflict-diff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.conflict-diff-row.has-diff {
+  background: var(--warning-soft);
+  border-color: color-mix(in srgb, var(--warning) 16%, transparent);
+}
+
+.conflict-diff-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text);
+  min-width: 140px;
+}
+
+.conflict-diff-meta svg {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.conflict-diff-row.has-diff .conflict-diff-meta svg {
+  color: var(--warning);
+}
+
+.conflict-diff-values {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.diff-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  background: var(--bg);
+  font-size: 0.76rem;
+  font-weight: 500;
+  max-width: 175px;
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   border: 1px solid var(--line);
 }
 
-.sync-diff-table th,
-.sync-diff-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
+.diff-val.local-val {
+  border-left: 3px solid var(--primary);
 }
 
-.sync-diff-table th {
-  font-weight: 750;
+.diff-val.remote-val {
+  border-left: 3px solid var(--success);
+}
+
+.diff-val .diff-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.diff-val .diff-text {
   color: var(--text);
-  background: var(--bg);
-  border-bottom: 2px solid var(--line);
+  font-weight: 650;
 }
 
-.sync-diff-table td {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.sync-diff-table tr.diff-highlight td {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-
-.sync-diff-table tr.diff-highlight td:nth-child(2),
-.sync-diff-table tr.diff-highlight td:nth-child(3) {
+.diff-arrow {
+  color: var(--muted);
   font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  user-select: none;
 }
 
-/* Glassmorphism support on scenic bg */
-.app-shell.has-scenic-bg .sync-diff-table {
+.conflict-diff-row.has-diff .diff-val {
+  border-color: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+/* Scenic Glassmorphism Support overrides */
+.app-shell.has-scenic-bg .conflict-group-card {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.app-shell.has-scenic-bg .sync-diff-table th {
+.app-shell.has-scenic-bg .diff-val {
   background: rgba(255, 255, 255, 0.5);
-  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
-.app-shell.has-scenic-bg .sync-diff-table td {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.app-shell.has-scenic-bg .sync-diff-table tr.diff-highlight td {
-  background: rgba(245, 158, 11, 0.2);
-  color: var(--warning);
-}
-
-:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table {
+:root[data-theme='dark'] .app-shell.has-scenic-bg .conflict-group-card {
+  background: rgba(30, 41, 59, 0.45);
   border-color: rgba(255, 255, 255, 0.05);
 }
 
-:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table th {
+:root[data-theme='dark'] .app-shell.has-scenic-bg .diff-val {
   background: rgba(15, 23, 42, 0.5);
-}
-
-:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table td {
-  background: rgba(30, 41, 59, 0.3);
-}
-
-:root[data-theme='dark'] .app-shell.has-scenic-bg .sync-diff-table tr.diff-highlight td {
-  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(255, 255, 255, 0.03);
 }
