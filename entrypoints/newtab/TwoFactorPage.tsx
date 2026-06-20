@@ -721,104 +721,103 @@ export function TwoFactorPage({
 
   return (
     <section className="two-factor-page">
-      <div className="two-factor-toolbar">
-        <div>
-          <div className="two-factor-kicker">
-            <ShieldCheck size={16} />
-            {text.title}
+      <div className="two-factor-dashboard-panel">
+        <header className="dashboard-header">
+          <div>
+            <div className="two-factor-kicker">
+              <ShieldCheck size={16} />
+              {text.title}
+            </div>
+            <h2>{text.title}</h2>
+            <p>{text.desc}</p>
           </div>
-          <h2>{text.title}</h2>
-          <p>{text.desc}</p>
-        </div>
-        <div className="two-factor-toolbar-actions">
-          <button onClick={() => setShowChangeModal(true)}>
-            <KeyRound size={16} />
-            {text.changePassphrase}
-          </button>
-          <button onClick={lockVault}>
-            <Lock size={16} />
-            {text.lockVault}
-          </button>
-          <button className="primary" onClick={() => openEntryForm()}>
-            <Plus size={16} />
-            {text.addEntry}
-          </button>
-        </div>
-      </div>
+          <div className="two-factor-toolbar-actions">
+            <button onClick={() => setShowChangeModal(true)}>
+              <KeyRound size={16} />
+              {text.changePassphrase}
+            </button>
+            <button onClick={lockVault}>
+              <Lock size={16} />
+              {text.lockVault}
+            </button>
+            <button className="primary" onClick={() => openEntryForm()}>
+              <Plus size={16} />
+              {text.addEntry}
+            </button>
+          </div>
+        </header>
 
-      <div className="two-factor-control-row">
-        <div className="two-factor-search">
-          <Search size={16} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={text.searchPlaceholder}
-          />
+        <div className="dashboard-control-row">
+          <div className="two-factor-search">
+            <Search size={16} />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={text.searchPlaceholder}
+            />
+          </div>
+          <div className="two-factor-countdown" style={{ ['--totp-progress' as any]: progress }}>
+            <span>{remainingSeconds}s</span>
+          </div>
         </div>
-        <div className="two-factor-countdown" style={{ ['--totp-progress' as any]: progress }}>
-          <span>{remainingSeconds}s</span>
-        </div>
-      </div>
 
-      {filteredEntries.length === 0 ? (
-        <article className="two-factor-empty">
-          <KeyRound size={28} />
-          <h3>{text.emptyTitle}</h3>
-          <p>{text.emptyDesc}</p>
-          <button className="primary" onClick={() => openEntryForm()}>
-            <Plus size={16} />
-            {text.addEntry}
-          </button>
-        </article>
-      ) : (
-        <div className="two-factor-entry-grid">
-          {filteredEntries.map((entry) => (
-            <article className="two-factor-entry-card" key={entry.id}>
-              <div className="two-factor-entry-main">
-                <div className="two-factor-entry-icon">
-                  <KeyRound size={18} />
+        {filteredEntries.length === 0 ? (
+          <article className="two-factor-empty">
+            <KeyRound size={28} />
+            <h3>{text.emptyTitle}</h3>
+            <p>{text.emptyDesc}</p>
+            <button className="primary" onClick={() => openEntryForm()}>
+              <Plus size={16} />
+              {text.addEntry}
+            </button>
+          </article>
+        ) : (
+          <div className="two-factor-entry-grid">
+            {filteredEntries.map((entry) => (
+              <article className="two-factor-entry-card" key={entry.id}>
+                <div className="two-factor-entry-main">
+                  <div className="two-factor-entry-icon">
+                    <KeyRound size={18} />
+                  </div>
+                  <div>
+                    <h3>{entry.platform}</h3>
+                    <p>{entry.account}</p>
+                    {entry.note && <small>{entry.note}</small>}
+                  </div>
                 </div>
-                <div>
-                  <h3>{entry.platform}</h3>
-                  <p>{entry.account}</p>
-                  {entry.note && <small>{entry.note}</small>}
+                <button className="two-factor-code" onClick={() => copyCode(entry)} title={text.copy}>
+                  {codes[entry.id] ?? '------'}
+                </button>
+                <div className="two-factor-entry-actions">
+                  <button onClick={() => copyCode(entry)} title={text.copy} aria-label={text.copy}>
+                    <Copy size={16} />
+                  </button>
+                  <button onClick={() => openEntryForm(entry)} title={text.editEntry} aria-label={text.editEntry}>
+                    <Edit3 size={16} />
+                  </button>
+                  <button onClick={() => deleteEntry(entry)} title={text.delete} aria-label={text.delete}>
+                    <Trash2 size={16} />
+                  </button>
                 </div>
-              </div>
-              <button className="two-factor-code" onClick={() => copyCode(entry)} title={text.copy}>
-                {codes[entry.id] ?? '------'}
-              </button>
-              <div className="two-factor-entry-actions">
-                <button onClick={() => copyCode(entry)} title={text.copy} aria-label={text.copy}>
-                  <Copy size={16} />
-                </button>
-                <button onClick={() => openEntryForm(entry)} title={text.editEntry} aria-label={text.editEntry}>
-                  <Edit3 size={16} />
-                </button>
-                <button onClick={() => deleteEntry(entry)} title={text.delete} aria-label={text.delete}>
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+              </article>
+            ))}
+          </div>
+        )}
 
-      <article className="two-factor-cloud-card">
-        <div>
-          <h3>
-            <Cloud size={18} />
-            {text.cloudSync}
-          </h3>
-          <p>{text.cloudSyncDesc}</p>
-        </div>
-        <div className="two-factor-cloud-actions">
-          <button onClick={onOpenCloudSettings}>{text.cloudSettings}</button>
-          <button className="primary" onClick={syncCloud} disabled={syncing}>
-            {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-            {syncing ? text.syncing : text.syncNow}
-          </button>
-        </div>
-      </article>
+        <footer className="dashboard-footer-bar">
+          <div className="footer-sync-info">
+            <Cloud size={16} />
+            <span>{text.cloudSyncDesc}</span>
+          </div>
+          <div className="footer-sync-actions">
+            <button onClick={onOpenCloudSettings}>{text.cloudSettings}</button>
+            <button className="primary" onClick={syncCloud} disabled={syncing}>
+              {syncing ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+              {syncing ? text.syncing : text.syncNow}
+            </button>
+          </div>
+        </footer>
+      </div>
 
       {showForm && (
         <div className="modal-mask" onClick={() => setShowForm(false)}>
