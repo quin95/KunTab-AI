@@ -93,6 +93,7 @@ export interface EncryptedTwoFactorVault {
     iv: string;
   };
   ciphertext: string;
+  passphraseHint?: string;
 }
 
 export interface TwoFactorSyncMetadata {

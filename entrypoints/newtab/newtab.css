@@ -4832,6 +4832,23 @@ select:focus {
   font-weight: 700;
 }
 
+.passphrase-hint-display {
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-border);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  margin-top: -0.5rem;
+  font-weight: 550;
+  word-break: break-all;
+}
+
+:root[data-theme='dark'] .passphrase-hint-display {
+  background: rgba(37, 99, 235, 0.1);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
 .two-factor-unlock-actions.single-action {
   margin-top: 0.5rem;
 }

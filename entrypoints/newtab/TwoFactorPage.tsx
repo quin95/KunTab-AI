@@ -123,6 +123,14 @@ const TEXT = {
     useLocal: '使用本地',
     close: '取消同步',
     localOverwrite: '已使用本地 2FA 保险箱覆盖远端 v{version}',
+    passphraseHintLabel: '口令提示 (选填)',
+    passphraseHintDesc: '提示: {hint}',
+    changePassphrase: '修改口令',
+    currentPassphrase: '当前口令',
+    newPassphrase: '新口令',
+    confirmNewPassphrase: '确认新口令',
+    passphraseChanged: '口令已成功修改',
+    incorrectCurrentPassphrase: '当前口令不正确',
   },
   'en-US': {
     title: '2FA Authenticator',
@@ -187,6 +195,14 @@ const TEXT = {
     useLocal: 'Use Local',
     close: 'Cancel Sync',
     localOverwrite: 'Local 2FA vault overwrote remote v{version}',
+    passphraseHintLabel: 'Passphrase Hint (Optional)',
+    passphraseHintDesc: 'Hint: {hint}',
+    changePassphrase: 'Change Passphrase',
+    currentPassphrase: 'Current Passphrase',
+    newPassphrase: 'New Passphrase',
+    confirmNewPassphrase: 'Confirm New Passphrase',
+    passphraseChanged: 'Passphrase changed successfully',
+    incorrectCurrentPassphrase: 'Incorrect current passphrase',
   },
 };
 
@@ -240,6 +256,15 @@ export function TwoFactorPage({
   const [localSyncMetadata, setLocalSyncMetadata] = useState<TwoFactorSyncMetadata | null>(null);
   const [showPassphrase, setShowPassphrase] = useState(false);
   const [showConfirmPassphrase, setShowConfirmPassphrase] = useState(false);
+  const [passphraseHintInput, setPassphraseHintInput] = useState('');
+  const [showChangeModal, setShowChangeModal] = useState(false);
+  const [currentPassphraseInput, setCurrentPassphraseInput] = useState('');
+  const [newPassphraseInput, setNewPassphraseInput] = useState('');
+  const [confirmNewPassphraseInput, setConfirmNewPassphraseInput] = useState('');
+  const [newPassphraseHintInput, setNewPassphraseHintInput] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmNewPass, setShowConfirmNewPass] = useState(false);
 
   const remainingSeconds = getTotpRemainingSeconds(now);
   const progress = getTotpProgress(now);
@@ -284,7 +309,7 @@ export function TwoFactorPage({
     if (!sessionPassphrase) {
       throw new Error(text.passphraseRequired);
     }
-    const encrypted = await encryptTwoFactorVault(nextData, sessionPassphrase);
+    const encrypted = await encryptTwoFactorVault(nextData, sessionPassphrase, encryptedVault?.passphraseHint);
     await setEncryptedTwoFactorVault(encrypted);
     setEncryptedVault(encrypted);
     setVaultData(nextData);
@@ -302,13 +327,14 @@ export function TwoFactorPage({
     setUnlocking(true);
     try {
       const data = createEmptyTwoFactorVaultData();
-      const encrypted = await encryptTwoFactorVault(data, passphraseInput);
+      const encrypted = await encryptTwoFactorVault(data, passphraseInput, passphraseHintInput);
       await setEncryptedTwoFactorVault(encrypted);
       setEncryptedVault(encrypted);
       setVaultData(data);
       setSessionPassphrase(passphraseInput);
       setPassphraseInput('');
       setConfirmPassphraseInput('');
+      setPassphraseHintInput('');
     } catch (error) {
       onToast(error instanceof Error ? error.message : text.invalidSecret);
     } finally {
@@ -507,6 +533,52 @@ export function TwoFactorPage({
     }
   };
 
+  const changePassphrase = async () => {
+    if (!encryptedVault || !vaultData) return;
+    if (!currentPassphraseInput.trim() || !newPassphraseInput.trim()) {
+      onToast(text.passphraseRequired);
+      return;
+    }
+    if (newPassphraseInput !== confirmNewPassphraseInput) {
+      onToast(text.passphraseMismatch);
+      return;
+    }
+
+    try {
+      await decryptTwoFactorVault(encryptedVault, currentPassphraseInput);
+    } catch {
+      onToast(text.incorrectCurrentPassphrase);
+      return;
+    }
+
+    setUnlocking(true);
+    try {
+      const encrypted = await encryptTwoFactorVault(
+        vaultData,
+        newPassphraseInput,
+        newPassphraseHintInput,
+      );
+      await setEncryptedTwoFactorVault(encrypted);
+      setEncryptedVault(encrypted);
+      setSessionPassphrase(newPassphraseInput);
+      onToast(text.passphraseChanged);
+
+      setCurrentPassphraseInput('');
+      setNewPassphraseInput('');
+      setConfirmNewPassphraseInput('');
+      setNewPassphraseHintInput('');
+      setShowChangeModal(false);
+
+      if (hasCloudSyncSettings(cloudSyncSettings)) {
+        await syncCloud();
+      }
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : text.invalidSecret);
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
   const resolveConflict = async (choice: TwoFactorCloudConflictChoice) => {
     if (!cloudConflict || choice === 'cancel') {
       setCloudConflict(null);
@@ -569,28 +641,47 @@ export function TwoFactorPage({
                     </button>
                   </div>
                 </label>
+                {!isCreating && encryptedVault.passphraseHint && (
+                  <div className="passphrase-hint-display">
+                    {fmt(text.passphraseHintDesc, { hint: encryptedVault.passphraseHint })}
+                  </div>
+                )}
                 {isCreating && (
-                  <label>
-                    {text.confirmPassphrase}
-                    <div className="password-input-wrapper">
+                  <>
+                    <label>
+                      {text.confirmPassphrase}
+                      <div className="password-input-wrapper">
+                        <input
+                          type={showConfirmPassphrase ? 'text' : 'password'}
+                          value={confirmPassphraseInput}
+                          onChange={(event) => setConfirmPassphraseInput(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') createVault();
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowConfirmPassphrase(!showConfirmPassphrase)}
+                          title={showConfirmPassphrase ? '隐藏' : '显示'}
+                        >
+                          {showConfirmPassphrase ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </label>
+                    <label>
+                      {text.passphraseHintLabel}
                       <input
-                        type={showConfirmPassphrase ? 'text' : 'password'}
-                        value={confirmPassphraseInput}
-                        onChange={(event) => setConfirmPassphraseInput(event.target.value)}
+                        type="text"
+                        value={passphraseHintInput}
+                        onChange={(event) => setPassphraseHintInput(event.target.value)}
+                        placeholder="例如：我最喜欢的颜色"
                         onKeyDown={(event) => {
                           if (event.key === 'Enter') createVault();
                         }}
                       />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowConfirmPassphrase(!showConfirmPassphrase)}
-                        title={showConfirmPassphrase ? '隐藏' : '显示'}
-                      >
-                        {showConfirmPassphrase ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                  </label>
+                    </label>
+                  </>
                 )}
               </div>
 
@@ -640,6 +731,10 @@ export function TwoFactorPage({
           <p>{text.desc}</p>
         </div>
         <div className="two-factor-toolbar-actions">
+          <button onClick={() => setShowChangeModal(true)}>
+            <KeyRound size={16} />
+            {text.changePassphrase}
+          </button>
           <button onClick={lockVault}>
             <Lock size={16} />
             {text.lockVault}
@@ -803,6 +898,88 @@ export function TwoFactorPage({
               <button onClick={() => resolveConflict('remote')} disabled={syncing}>{text.useRemote}</button>
               <button className="primary" onClick={() => resolveConflict('local')} disabled={syncing}>
                 {text.useLocal}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChangeModal && (
+        <div className="modal-mask" onClick={() => setShowChangeModal(false)}>
+          <div className="modal-card two-factor-form-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{text.changePassphrase}</h3>
+            </div>
+            <div className="modal-body">
+              <div className="modal-field">
+                <label>{text.currentPassphrase}</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={showCurrentPass ? 'text' : 'password'}
+                    value={currentPassphraseInput}
+                    onChange={(event) => setCurrentPassphraseInput(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowCurrentPass(!showCurrentPass)}
+                    title={showCurrentPass ? '隐藏' : '显示'}
+                  >
+                    {showCurrentPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="modal-field">
+                <label>{text.newPassphrase}</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={showNewPass ? 'text' : 'password'}
+                    value={newPassphraseInput}
+                    onChange={(event) => setNewPassphraseInput(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowNewPass(!showNewPass)}
+                    title={showNewPass ? '隐藏' : '显示'}
+                  >
+                    {showNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="modal-field">
+                <label>{text.confirmNewPassphrase}</label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={showConfirmNewPass ? 'text' : 'password'}
+                    value={confirmNewPassphraseInput}
+                    onChange={(event) => setConfirmNewPassphraseInput(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowConfirmNewPass(!showConfirmNewPass)}
+                    title={showConfirmNewPass ? '隐藏' : '显示'}
+                  >
+                    {showConfirmNewPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+              <div className="modal-field">
+                <label>{text.passphraseHintLabel}</label>
+                <input
+                  type="text"
+                  value={newPassphraseHintInput}
+                  onChange={(event) => setNewPassphraseHintInput(event.target.value)}
+                  placeholder="例如：我最喜欢的颜色"
+                />
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button onClick={() => setShowChangeModal(false)}>{text.cancel}</button>
+              <button className="primary" onClick={changePassphrase} disabled={unlocking}>
+                {unlocking ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                {text.save}
               </button>
             </div>
           </div>

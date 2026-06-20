@@ -83,6 +83,7 @@ export function normalizeTwoFactorEntry(entry: TwoFactorEntry): TwoFactorEntry {
 export async function encryptTwoFactorVault(
   data: TwoFactorVaultData,
   passphrase: string,
+  passphraseHint?: string,
 ): Promise<EncryptedTwoFactorVault> {
   const salt = getRandomBytes(SALT_BYTES);
   const iv = getRandomBytes(IV_BYTES);
@@ -99,6 +100,7 @@ export async function encryptTwoFactorVault(
     schemaVersion: 1,
     updatedAt: Date.now(),
     entryCount: normalizedData.entries.length,
+    passphraseHint: passphraseHint?.trim() || undefined,
     kdf: {
       name: 'PBKDF2',
       hash: 'SHA-256',
@@ -127,7 +129,8 @@ export function parseEncryptedTwoFactorVault(value: unknown): EncryptedTwoFactor
     vault.cipher?.name !== 'AES-GCM' ||
     typeof vault.kdf.salt !== 'string' ||
     typeof vault.cipher.iv !== 'string' ||
-    typeof vault.ciphertext !== 'string'
+    typeof vault.ciphertext !== 'string' ||
+    (vault.passphraseHint !== undefined && typeof vault.passphraseHint !== 'string')
   ) {
     throw new Error('2FA 保险箱格式无效');
   }
