@@ -110,9 +110,13 @@ import {
   ArrowUp,
   RefreshCw,
   SendHorizontal,
+  ShieldCheck,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { testAi, chat } from './lib/ai';
 import { buildCompareTrees, executeCategorization, serializeBookmarkContext, type DiffTreeNode } from './lib/aiBookmark';
+import { TwoFactorPage } from './TwoFactorPage';
 import './newtab.css';
 import logoImg from '../../assets/logo.png';
 
@@ -138,6 +142,7 @@ const LOCALE_TEXT = {
   'zh-CN': {
     navHome: '主页中心',
     navBookmarks: '书签管理',
+    navTwoFactor: '2FA 取码',
     navBackup: '备份恢复',
     navSettings: '系统设置',
     theme: '主题',
@@ -305,6 +310,7 @@ const LOCALE_TEXT = {
   'en-US': {
     navHome: 'Home',
     navBookmarks: 'Bookmarks',
+    navTwoFactor: '2FA Codes',
     navBackup: 'Backup',
     navSettings: 'Settings',
     theme: 'Theme',
@@ -549,6 +555,8 @@ export default function App() {
   const [duplicateSelections, setDuplicateSelections] = useState<Record<string, string[]>>({});
   const [compareTreeExpanded, setCompareTreeExpanded] = useState<Record<string, boolean>>({});
   const [scanningEmptyFolders, setScanningEmptyFolders] = useState(false);
+  const [showAiApiKey, setShowAiApiKey] = useState(false);
+  const [showCloudSecretKey, setShowCloudSecretKey] = useState(false);
   const [deletingEmptyFolderId, setDeletingEmptyFolderId] = useState<string | null>(null);
 
   // Update Checker State
@@ -556,6 +564,7 @@ export default function App() {
   const [hasUpdate, setHasUpdate] = useState(false);
   const [latestVersion, setLatestVersion] = useState('');
   const [updateUrl, setUpdateUrl] = useState('https://github.com/quin95/KunTab-AI/releases');
+  const [settingsScrollTarget, setSettingsScrollTarget] = useState<'cloud-sync' | null>(null);
 
   const toggleCompareFolder = (id: string) => {
     setCompareTreeExpanded((prev) => ({
@@ -571,6 +580,7 @@ export default function App() {
   const navItems: Array<{ tab: NavTab; label: string; icon: typeof Home }> = [
     { tab: 'home', label: text.navHome, icon: Home },
     { tab: 'bookmarks', label: text.navBookmarks, icon: Bookmark },
+    { tab: 'two-factor', label: text.navTwoFactor, icon: ShieldCheck },
     { tab: 'ai-assistant', label: text.navAiAssistant, icon: Sparkles },
     { tab: 'backup', label: text.navBackup, icon: CircleArrowDown },
     { tab: 'settings', label: text.navSettings, icon: Settings },
@@ -591,6 +601,8 @@ export default function App() {
         return text.navHome;
       case 'bookmarks':
         return text.navBookmarks;
+      case 'two-factor':
+        return text.navTwoFactor;
       case 'ai-assistant':
         return text.navAiAssistant;
       case 'backup':
@@ -739,6 +751,26 @@ export default function App() {
       getStorageSize().then(setCacheSize);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'settings' || settingsScrollTarget !== 'cloud-sync') return;
+
+    let timeoutId: number | undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      const target = document.getElementById('cloud-sync-settings-card');
+      if (!target) return;
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target instanceof HTMLElement) {
+        target.focus({ preventScroll: true });
+      }
+      timeoutId = window.setTimeout(() => setSettingsScrollTarget(null), 1600);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
+  }, [activeTab, settingsScrollTarget]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -2338,6 +2370,18 @@ ${serializedContext}
           </section>
         )}
 
+        {activeTab === 'two-factor' && (
+          <TwoFactorPage
+            language={settings.language}
+            cloudSyncSettings={cloudSyncSettings}
+            onOpenCloudSettings={() => {
+              setSettingsScrollTarget('cloud-sync');
+              setActiveTab('settings');
+            }}
+            onToast={showToast}
+          />
+        )}
+
         {activeTab === 'backup' && (
           <section className="backup-page">
             <div className="backup-section">
@@ -2641,7 +2685,11 @@ ${serializedContext}
 
         {activeTab === 'settings' && (
           <section className="settings-page">
-            <article className="settings-card">
+            <article
+              id="cloud-sync-settings-card"
+              className={`settings-card ${settingsScrollTarget === 'cloud-sync' ? 'settings-card-highlight' : ''}`}
+              tabIndex={-1}
+            >
               <h3>{text.generalSettings}</h3>
               <div className="settings-row">
                 <div className="setting-left">
@@ -2922,12 +2970,22 @@ ${serializedContext}
                         <span className="setting-desc">{text.aiApiKeyPlaceholder}</span>
                       </div>
                     </div>
-                    <input
-                      type="password"
-                      placeholder="••••••••••••••••"
-                      value={settings.aiApiKey}
-                      onChange={(event) => saveSettingsPatch({ aiApiKey: event.target.value })}
-                    />
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showAiApiKey ? 'text' : 'password'}
+                        placeholder="••••••••••••••••"
+                        value={settings.aiApiKey}
+                        onChange={(event) => saveSettingsPatch({ aiApiKey: event.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowAiApiKey(!showAiApiKey)}
+                        title={showAiApiKey ? '隐藏' : '显示'}
+                      >
+                        {showAiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="settings-row">
@@ -3042,12 +3100,22 @@ ${serializedContext}
                     <span className="setting-desc">{text.cloudSyncSecretAccessKeyDesc}</span>
                   </div>
                 </div>
-                <input
-                  type="password"
-                  placeholder="••••••••••••••••"
-                  value={cloudSyncSettings.secretAccessKey}
-                  onChange={(event) => saveCloudSyncSettingsPatch({ secretAccessKey: event.target.value })}
-                />
+                <div className="password-input-wrapper">
+                  <input
+                    type={showCloudSecretKey ? 'text' : 'password'}
+                    placeholder="••••••••••••••••"
+                    value={cloudSyncSettings.secretAccessKey}
+                    onChange={(event) => saveCloudSyncSettingsPatch({ secretAccessKey: event.target.value })}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowCloudSecretKey(!showCloudSecretKey)}
+                    title={showCloudSecretKey ? '隐藏' : '显示'}
+                  >
+                    {showCloudSecretKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div className="settings-row">

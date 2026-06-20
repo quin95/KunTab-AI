@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Check,
-  ChevronDown,
   Cloud,
   Copy,
   Edit3,
+  Eye,
+  EyeOff,
   KeyRound,
   Loader2,
   Lock,
@@ -237,7 +238,8 @@ export function TwoFactorPage({
   const [syncing, setSyncing] = useState(false);
   const [cloudConflict, setCloudConflict] = useState<TwoFactorCloudPayload | null>(null);
   const [localSyncMetadata, setLocalSyncMetadata] = useState<TwoFactorSyncMetadata | null>(null);
-  const [showIntro, setShowIntro] = useState(true);
+  const [showPassphrase, setShowPassphrase] = useState(false);
+  const [showConfirmPassphrase, setShowConfirmPassphrase] = useState(false);
 
   const remainingSeconds = getTotpRemainingSeconds(now);
   const progress = getTotpProgress(now);
@@ -533,83 +535,94 @@ export function TwoFactorPage({
     const isCreating = !encryptedVault;
     return (
       <section className="two-factor-page two-factor-page-locked">
-        <div className="two-factor-auth-container">
-          <article className="two-factor-unlock-card centered-card">
-            <div className="two-factor-unlock-card-header">
-              <div className="two-factor-kicker">
-                <ShieldCheck size={18} />
-                {text.title}
+        <div className="two-factor-auth-container split-layout">
+          <article className="two-factor-unlock-card split-card">
+            <div className="two-factor-unlock-left">
+              <div className="two-factor-unlock-card-header">
+                <div className="two-factor-kicker">
+                  <ShieldCheck size={18} />
+                  {text.title}
+                </div>
+                <h2>{isCreating ? text.createTitle : text.unlockTitle}</h2>
+                <p>{isCreating ? text.createDesc : text.unlockDesc}</p>
               </div>
-              <h2>{isCreating ? text.createTitle : text.unlockTitle}</h2>
-              <p>{isCreating ? text.createDesc : text.unlockDesc}</p>
-            </div>
 
-            <div className="two-factor-unlock-card-body">
-              <label>
-                {text.passphrase}
-                <input
-                  type="password"
-                  value={passphraseInput}
-                  onChange={(event) => setPassphraseInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' && !isCreating) unlockVault();
-                  }}
-                />
-              </label>
-              {isCreating && (
+              <div className="two-factor-unlock-card-body">
                 <label>
-                  {text.confirmPassphrase}
-                  <input
-                    type="password"
-                    value={confirmPassphraseInput}
-                    onChange={(event) => setConfirmPassphraseInput(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') createVault();
-                    }}
-                  />
+                  {text.passphrase}
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showPassphrase ? 'text' : 'password'}
+                      value={passphraseInput}
+                      onChange={(event) => setPassphraseInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !isCreating) unlockVault();
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassphrase(!showPassphrase)}
+                      title={showPassphrase ? '隐藏' : '显示'}
+                    >
+                      {showPassphrase ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </label>
-              )}
+                {isCreating && (
+                  <label>
+                    {text.confirmPassphrase}
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showConfirmPassphrase ? 'text' : 'password'}
+                        value={confirmPassphraseInput}
+                        onChange={(event) => setConfirmPassphraseInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') createVault();
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowConfirmPassphrase(!showConfirmPassphrase)}
+                        title={showConfirmPassphrase ? '隐藏' : '显示'}
+                      >
+                        {showConfirmPassphrase ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </label>
+                )}
+              </div>
+
+              <div className="two-factor-unlock-actions single-action">
+                <button
+                  className="primary full-width"
+                  onClick={isCreating ? createVault : unlockVault}
+                  disabled={unlocking}
+                >
+                  {unlocking ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
+                  {isCreating ? text.createVault : text.unlockVault}
+                </button>
+              </div>
             </div>
 
-            <div className="two-factor-unlock-actions single-action">
-              <button
-                className="primary full-width"
-                onClick={isCreating ? createVault : unlockVault}
-                disabled={unlocking}
-              >
-                {unlocking ? <Loader2 size={16} className="animate-spin" /> : <KeyRound size={16} />}
-                {isCreating ? text.createVault : text.unlockVault}
-              </button>
+            <div className="two-factor-unlock-right">
+              <div className="two-factor-intro-list">
+                <div>
+                  <strong>{text.introWhatTitle}</strong>
+                  <span>{text.introWhatDesc}</span>
+                </div>
+                <div>
+                  <strong>{text.introUseTitle}</strong>
+                  <span>{text.introUseDesc}</span>
+                </div>
+                <div>
+                  <strong>{text.introSecureTitle}</strong>
+                  <span>{text.introSecureDesc}</span>
+                </div>
+              </div>
             </div>
           </article>
-
-          <div className="two-factor-help-accordion">
-            <button
-              className="two-factor-help-toggle"
-              onClick={() => setShowIntro(!showIntro)}
-              type="button"
-            >
-              <span>{text.introHelpTitle}</span>
-              <ChevronDown
-                size={16}
-                className={`toggle-arrow ${showIntro ? 'expanded' : ''}`}
-              />
-            </button>
-            <div className={`two-factor-intro-list modern-accordion-content ${showIntro ? 'expanded' : ''}`}>
-              <div>
-                <strong>{text.introWhatTitle}</strong>
-                <span>{text.introWhatDesc}</span>
-              </div>
-              <div>
-                <strong>{text.introUseTitle}</strong>
-                <span>{text.introUseDesc}</span>
-              </div>
-              <div>
-                <strong>{text.introSecureTitle}</strong>
-                <span>{text.introSecureDesc}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
     );

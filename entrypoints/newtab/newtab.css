@@ -156,6 +156,56 @@ select:focus {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 2.5rem;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: auto;
+  min-height: auto;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.password-toggle-btn:active {
+  transform: none;
+}
+
+.settings-row .password-input-wrapper {
+  min-width: 250px;
+  max-width: 360px;
+  width: 100%;
+}
+
+.settings-row .password-input-wrapper input {
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+}
+
 /* Layout Shell */
 .app-shell {
   min-height: 100vh;
