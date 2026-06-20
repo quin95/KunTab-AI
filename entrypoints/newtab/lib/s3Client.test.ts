@@ -3,6 +3,7 @@ import {
   buildPathStyleObjectUrl,
   buildS3ConnectionTestKey,
   buildS3ObjectKey,
+  buildS3TwoFactorObjectKey,
   formatS3ErrorMessage,
   normalizeS3KeyPrefix,
 } from './s3Client';
@@ -18,6 +19,10 @@ describe('S3 key helpers', () => {
 
   it('builds the fixed KunTab sync object key', () => {
     expect(buildS3ObjectKey('kuntab')).toBe('kuntab/kuntab-sync.json');
+  });
+
+  it('builds the fixed KunTab 2FA object key', () => {
+    expect(buildS3TwoFactorObjectKey('/kuntab/')).toBe('kuntab/kuntab-2fa.json');
   });
 
   it('builds the fixed KunTab connection test object key', () => {

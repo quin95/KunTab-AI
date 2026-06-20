@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'bookmarks' | 'backup' | 'settings' | 'ai-assistant';
+export type NavTab = 'home' | 'bookmarks' | 'two-factor' | 'backup' | 'settings' | 'ai-assistant';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type SearchEngineId = 'google' | 'baidu' | 'bing' | 'github' | 'chatgpt' | 'youtube';
@@ -61,6 +61,59 @@ export interface CloudSyncPayload {
 }
 
 export type CloudSyncConflictChoice = 'remote' | 'local' | 'cancel';
+
+export interface TwoFactorEntry {
+  id: string;
+  platform: string;
+  account: string;
+  secret: string;
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface TwoFactorVaultData {
+  entries: TwoFactorEntry[];
+}
+
+export interface EncryptedTwoFactorVault {
+  app: 'kuntab';
+  type: 'two-factor-vault';
+  schemaVersion: 1;
+  updatedAt: number;
+  entryCount: number;
+  kdf: {
+    name: 'PBKDF2';
+    hash: 'SHA-256';
+    iterations: number;
+    salt: string;
+  };
+  cipher: {
+    name: 'AES-GCM';
+    iv: string;
+  };
+  ciphertext: string;
+}
+
+export interface TwoFactorSyncMetadata {
+  deviceId: string;
+  localVersion: number;
+  localUpdatedAt: number;
+  lastSyncedLocalVersion: number;
+  lastRemoteVersion: number;
+}
+
+export interface TwoFactorCloudPayload {
+  app: 'kuntab';
+  type: 'two-factor-sync';
+  schemaVersion: 1;
+  remoteVersion: number;
+  updatedAt: number;
+  updatedByDeviceId: string;
+  vault: EncryptedTwoFactorVault;
+}
+
+export type TwoFactorCloudConflictChoice = 'remote' | 'local' | 'cancel';
 
 export interface BackupFavoriteSite {
   title: string;

@@ -1,4 +1,12 @@
-import type { AppSettings, CloudSyncMetadata, CloudSyncSettings, FavoritesState, RecentOpenItem } from '../models';
+import type {
+  AppSettings,
+  CloudSyncMetadata,
+  CloudSyncSettings,
+  EncryptedTwoFactorVault,
+  FavoritesState,
+  RecentOpenItem,
+  TwoFactorSyncMetadata,
+} from '../models';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
 
@@ -7,6 +15,8 @@ const FAVORITES_KEY = 'kuntab::favorites';
 const RECENT_OPENS_KEY = 'kuntab::recent-opens';
 const CLOUD_SYNC_SETTINGS_KEY = 'kuntab::cloud-sync-settings';
 const CLOUD_SYNC_META_KEY = 'kuntab::cloud-sync-meta';
+const TWO_FACTOR_VAULT_KEY = 'kuntab::two-factor-vault';
+const TWO_FACTOR_SYNC_META_KEY = 'kuntab::two-factor-sync-meta';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
@@ -187,6 +197,53 @@ export async function setRecentOpensStorage(items: RecentOpenItem[]): Promise<vo
   await setLocal(RECENT_OPENS_KEY, items);
 }
 
+export async function getEncryptedTwoFactorVault(): Promise<EncryptedTwoFactorVault | null> {
+  return await getLocal<EncryptedTwoFactorVault | null>(TWO_FACTOR_VAULT_KEY, null);
+}
+
+export async function getTwoFactorSyncMetadata(): Promise<TwoFactorSyncMetadata> {
+  const saved = await getLocal<Partial<TwoFactorSyncMetadata>>(TWO_FACTOR_SYNC_META_KEY, {});
+  const metadata: TwoFactorSyncMetadata = {
+    deviceId: saved.deviceId || createDeviceId(),
+    localVersion: saved.localVersion ?? 0,
+    localUpdatedAt: saved.localUpdatedAt ?? 0,
+    lastSyncedLocalVersion: saved.lastSyncedLocalVersion ?? 0,
+    lastRemoteVersion: saved.lastRemoteVersion ?? 0,
+  };
+  if (!saved.deviceId) {
+    await setLocal(TWO_FACTOR_SYNC_META_KEY, metadata);
+  }
+  return metadata;
+}
+
+export async function setTwoFactorSyncMetadata(metadata: TwoFactorSyncMetadata): Promise<void> {
+  await setLocal(TWO_FACTOR_SYNC_META_KEY, metadata);
+}
+
+export async function setEncryptedTwoFactorVault(vault: EncryptedTwoFactorVault): Promise<void> {
+  await setLocal(TWO_FACTOR_VAULT_KEY, vault);
+  const metadata = await getTwoFactorSyncMetadata();
+  await setTwoFactorSyncMetadata({
+    ...metadata,
+    localVersion: metadata.localVersion + 1,
+    localUpdatedAt: Date.now(),
+  });
+}
+
+export async function replaceEncryptedTwoFactorVaultFromCloud(
+  vault: EncryptedTwoFactorVault,
+  remoteVersion: number,
+): Promise<void> {
+  await setLocal(TWO_FACTOR_VAULT_KEY, vault);
+  const metadata = await getTwoFactorSyncMetadata();
+  await setTwoFactorSyncMetadata({
+    ...metadata,
+    localUpdatedAt: Date.now(),
+    lastSyncedLocalVersion: metadata.localVersion,
+    lastRemoteVersion: remoteVersion,
+  });
+}
+
 
 export async function clearLocalCache(): Promise<void> {
   await removeLocal([RECENT_OPENS_KEY]);
@@ -199,13 +256,21 @@ export async function clearAppCache(): Promise<void> {
     localStorage.removeItem(RECENT_OPENS_KEY);
     localStorage.removeItem(CLOUD_SYNC_SETTINGS_KEY);
     localStorage.removeItem(CLOUD_SYNC_META_KEY);
+    localStorage.removeItem(TWO_FACTOR_VAULT_KEY);
+    localStorage.removeItem(TWO_FACTOR_SYNC_META_KEY);
     return;
   }
   await ext.storage.sync.set({
     [SETTINGS_KEY]: DEFAULT_SETTINGS,
     [FAVORITES_KEY]: DEFAULT_FAVORITES,
   });
-  await ext.storage.local.remove([RECENT_OPENS_KEY, CLOUD_SYNC_SETTINGS_KEY, CLOUD_SYNC_META_KEY]);
+  await ext.storage.local.remove([
+    RECENT_OPENS_KEY,
+    CLOUD_SYNC_SETTINGS_KEY,
+    CLOUD_SYNC_META_KEY,
+    TWO_FACTOR_VAULT_KEY,
+    TWO_FACTOR_SYNC_META_KEY,
+  ]);
 }
 
 export async function replaceFromBackup(settings: AppSettings, favorites: FavoritesState): Promise<void> {
@@ -237,7 +302,7 @@ export function watchSettings(handler: (settings: AppSettings) => void): () => v
 export async function getStorageSize(): Promise<string> {
   let totalBytes = 0;
   if (!hasStorageApi) {
-    const keys = [SETTINGS_KEY, FAVORITES_KEY, RECENT_OPENS_KEY];
+    const keys = [SETTINGS_KEY, FAVORITES_KEY, RECENT_OPENS_KEY, TWO_FACTOR_VAULT_KEY];
     for (const key of keys) {
       const val = localStorage.getItem(key);
       if (val) {
@@ -246,13 +311,16 @@ export async function getStorageSize(): Promise<string> {
     }
   } else {
     try {
-      const [localData, syncData] = await Promise.all([
+      const [localData, twoFactorData, syncData] = await Promise.all([
         ext.storage.local.get([RECENT_OPENS_KEY, CLOUD_SYNC_SETTINGS_KEY, CLOUD_SYNC_META_KEY]),
+        ext.storage.local.get([TWO_FACTOR_VAULT_KEY, TWO_FACTOR_SYNC_META_KEY]),
         ext.storage.sync.get([SETTINGS_KEY, FAVORITES_KEY]),
       ]);
       const localStr = JSON.stringify(localData);
+      const twoFactorStr = JSON.stringify(twoFactorData);
       const syncStr = JSON.stringify(syncData);
       totalBytes += new TextEncoder().encode(localStr).length;
+      totalBytes += new TextEncoder().encode(twoFactorStr).length;
       totalBytes += new TextEncoder().encode(syncStr).length;
     } catch {
       // Fallback

@@ -16,6 +16,12 @@ export function buildS3ObjectKey(prefix: string): string {
   return `${normalized}/kuntab-sync.json`;
 }
 
+export function buildS3TwoFactorObjectKey(prefix: string): string {
+  const normalized = normalizeS3KeyPrefix(prefix);
+  if (!normalized) throw new Error('Key 前缀不能为空');
+  return `${normalized}/kuntab-2fa.json`;
+}
+
 export function buildS3ConnectionTestKey(prefix: string): string {
   const normalized = normalizeS3KeyPrefix(prefix);
   if (!normalized) throw new Error('Key 前缀不能为空');
