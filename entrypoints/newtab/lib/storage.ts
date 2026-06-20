@@ -5,8 +5,10 @@ import type {
   EncryptedTwoFactorVault,
   FavoritesState,
   RecentOpenItem,
+  SiteNavigationData,
   TwoFactorSyncMetadata,
 } from '../models';
+import { DEFAULT_SITE_NAVIGATION, sanitizeSiteNavigationData } from './siteNavigator';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
 
@@ -17,6 +19,7 @@ const CLOUD_SYNC_SETTINGS_KEY = 'kuntab::cloud-sync-settings';
 const CLOUD_SYNC_META_KEY = 'kuntab::cloud-sync-meta';
 const TWO_FACTOR_VAULT_KEY = 'kuntab::two-factor-vault';
 const TWO_FACTOR_SYNC_META_KEY = 'kuntab::two-factor-sync-meta';
+const SITE_NAVIGATION_KEY = 'kuntab::site-navigation';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'light',
@@ -202,6 +205,16 @@ export async function setRecentOpensStorage(items: RecentOpenItem[]): Promise<vo
   await setLocal(RECENT_OPENS_KEY, items);
 }
 
+export async function getSiteNavigation(): Promise<SiteNavigationData> {
+  const value = await getLocal<Partial<SiteNavigationData>>(SITE_NAVIGATION_KEY, DEFAULT_SITE_NAVIGATION);
+  return sanitizeSiteNavigationData(value);
+}
+
+export async function setSiteNavigation(next: SiteNavigationData): Promise<void> {
+  await setLocal(SITE_NAVIGATION_KEY, sanitizeSiteNavigationData(next));
+  await bumpCloudSyncLocalVersion();
+}
+
 export async function getEncryptedTwoFactorVault(): Promise<EncryptedTwoFactorVault | null> {
   return await getLocal<EncryptedTwoFactorVault | null>(TWO_FACTOR_VAULT_KEY, null);
 }
@@ -263,6 +276,7 @@ export async function clearAppCache(): Promise<void> {
     localStorage.removeItem(CLOUD_SYNC_META_KEY);
     localStorage.removeItem(TWO_FACTOR_VAULT_KEY);
     localStorage.removeItem(TWO_FACTOR_SYNC_META_KEY);
+    localStorage.removeItem(SITE_NAVIGATION_KEY);
     return;
   }
   await ext.storage.sync.set({
@@ -275,18 +289,29 @@ export async function clearAppCache(): Promise<void> {
     CLOUD_SYNC_META_KEY,
     TWO_FACTOR_VAULT_KEY,
     TWO_FACTOR_SYNC_META_KEY,
+    SITE_NAVIGATION_KEY,
   ]);
 }
 
-export async function replaceFromBackup(settings: AppSettings, favorites: FavoritesState): Promise<void> {
+export async function replaceFromBackup(
+  settings: AppSettings,
+  favorites: FavoritesState,
+  siteNavigation: SiteNavigationData,
+): Promise<void> {
   await setSync(SETTINGS_KEY, settings);
   await setSync(FAVORITES_KEY, favorites);
+  await setLocal(SITE_NAVIGATION_KEY, sanitizeSiteNavigationData(siteNavigation));
   await bumpCloudSyncLocalVersion();
 }
 
-export async function replaceFromCloudSync(settings: AppSettings, favorites: FavoritesState): Promise<void> {
+export async function replaceFromCloudSync(
+  settings: AppSettings,
+  favorites: FavoritesState,
+  siteNavigation: SiteNavigationData,
+): Promise<void> {
   await setSync(SETTINGS_KEY, settings);
   await setSync(FAVORITES_KEY, favorites);
+  await setLocal(SITE_NAVIGATION_KEY, sanitizeSiteNavigationData(siteNavigation));
 }
 
 export function watchSettings(handler: (settings: AppSettings) => void): () => void {
@@ -307,7 +332,7 @@ export function watchSettings(handler: (settings: AppSettings) => void): () => v
 export async function getStorageSize(): Promise<string> {
   let totalBytes = 0;
   if (!hasStorageApi) {
-    const keys = [SETTINGS_KEY, FAVORITES_KEY, RECENT_OPENS_KEY, TWO_FACTOR_VAULT_KEY];
+    const keys = [SETTINGS_KEY, FAVORITES_KEY, RECENT_OPENS_KEY, TWO_FACTOR_VAULT_KEY, SITE_NAVIGATION_KEY];
     for (const key of keys) {
       const val = localStorage.getItem(key);
       if (val) {
@@ -317,7 +342,7 @@ export async function getStorageSize(): Promise<string> {
   } else {
     try {
       const [localData, twoFactorData, syncData] = await Promise.all([
-        ext.storage.local.get([RECENT_OPENS_KEY, CLOUD_SYNC_SETTINGS_KEY, CLOUD_SYNC_META_KEY]),
+        ext.storage.local.get([RECENT_OPENS_KEY, CLOUD_SYNC_SETTINGS_KEY, CLOUD_SYNC_META_KEY, SITE_NAVIGATION_KEY]),
         ext.storage.local.get([TWO_FACTOR_VAULT_KEY, TWO_FACTOR_SYNC_META_KEY]),
         ext.storage.sync.get([SETTINGS_KEY, FAVORITES_KEY]),
       ]);

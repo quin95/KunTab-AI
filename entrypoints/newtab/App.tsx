@@ -10,6 +10,7 @@ import type {
   CloudSyncConflictChoice,
   CloudSyncPayload,
   CloudSyncMetadata,
+  SiteNavigationData,
 } from './models';
 import {
   clearAppCache,
@@ -29,6 +30,8 @@ import {
   watchSettings,
   setRecentOpensStorage,
   getStorageSize,
+  getSiteNavigation,
+  setSiteNavigation,
 } from './lib/storage';
 import {
   type BookmarkNode,
@@ -113,10 +116,13 @@ import {
   ShieldCheck,
   Eye,
   EyeOff,
+  Compass,
 } from 'lucide-react';
 import { testAi, chat } from './lib/ai';
 import { buildCompareTrees, executeCategorization, serializeBookmarkContext, type DiffTreeNode } from './lib/aiBookmark';
+import { DEFAULT_SITE_NAVIGATION } from './lib/siteNavigator';
 import { TwoFactorPage } from './TwoFactorPage';
+import { SiteNavigatorPage } from './SiteNavigatorPage';
 import './newtab.css';
 import logoImg from '../../assets/logo.png';
 
@@ -141,6 +147,7 @@ const SEARCH_ENGINE_HOSTS: Record<string, string> = {
 const LOCALE_TEXT = {
   'zh-CN': {
     navHome: '主页中心',
+    navSiteNavigator: '网址导航',
     navBookmarks: '书签管理',
     navTwoFactor: '2FA 取码',
     navBackup: '备份恢复',
@@ -309,6 +316,7 @@ const LOCALE_TEXT = {
   },
   'en-US': {
     navHome: 'Home',
+    navSiteNavigator: 'Site Navigator',
     navBookmarks: 'Bookmarks',
     navTwoFactor: '2FA Codes',
     navBackup: 'Backup',
@@ -500,6 +508,7 @@ export default function App() {
 
   const [selectedFolderId, setSelectedFolderId] = useState<string>('0');
   const [favorites, setFavoritesState] = useState<string[]>([]);
+  const [siteNavigation, setSiteNavigationState] = useState<SiteNavigationData>(DEFAULT_SITE_NAVIGATION);
   const [recentOpens, setRecentOpens] = useState<Array<{ id: string; title: string; url: string; openedAt: number }>>([]);
 
   const [homeQuery, setHomeQuery] = useState('');
@@ -579,6 +588,7 @@ export default function App() {
 
   const navItems: Array<{ tab: NavTab; label: string; icon: typeof Home }> = [
     { tab: 'home', label: text.navHome, icon: Home },
+    { tab: 'site-navigator', label: text.navSiteNavigator, icon: Compass },
     { tab: 'bookmarks', label: text.navBookmarks, icon: Bookmark },
     { tab: 'two-factor', label: text.navTwoFactor, icon: ShieldCheck },
     { tab: 'ai-assistant', label: text.navAiAssistant, icon: Sparkles },
@@ -599,6 +609,8 @@ export default function App() {
     switch (tab) {
       case 'home':
         return text.navHome;
+      case 'site-navigator':
+        return text.navSiteNavigator;
       case 'bookmarks':
         return text.navBookmarks;
       case 'two-factor':
@@ -633,18 +645,20 @@ export default function App() {
   };
 
   const reloadStorage = async () => {
-    const [savedSettings, savedFavorites, recent, size, savedCloudSyncSettings] = await Promise.all([
+    const [savedSettings, savedFavorites, recent, size, savedCloudSyncSettings, savedSiteNavigation] = await Promise.all([
       getSettings(),
       getFavorites(),
       getRecentOpens(),
       getStorageSize(),
       getCloudSyncSettings(),
+      getSiteNavigation(),
     ]);
     setSettingsState(savedSettings);
     setFavoritesState(savedFavorites.favorites);
     setRecentOpens(recent);
     setCacheSize(size);
     setCloudSyncSettingsState(savedCloudSyncSettings);
+    setSiteNavigationState(savedSiteNavigation);
 
     if (savedSettings.startPage === 'bookmarks') {
       setActiveTab('bookmarks');
@@ -1083,6 +1097,12 @@ export default function App() {
     await setFavorites({ favorites: next });
   };
 
+  const syncSiteNavigation = async (next: SiteNavigationData) => {
+    setSiteNavigationState(next);
+    await setSiteNavigation(next);
+    setCacheSize(await getStorageSize());
+  };
+
   const onOpenBookmark = async (bookmark: FlatBookmark, inNewTab = true) => {
     if (inNewTab) {
       openUrl(bookmark.url);
@@ -1244,7 +1264,7 @@ export default function App() {
 
       const { added, skipped } = await importBackupTree(backupFolderId, backup.tree);
       const restoredFavorites = await resolveBackupFavorites(backup);
-      await applyBackupConfig(backup.settings, restoredFavorites);
+      await applyBackupConfig(backup.settings, restoredFavorites, backup.siteNavigation);
       await reloadStorage();
       showToast(fmt(text.importDone, { added, skipped }));
     } catch (error) {
@@ -1256,7 +1276,7 @@ export default function App() {
   };
 
   const onExportBackup = async (kind: 'json' | 'html') => {
-    const backup = await buildBackup(settings, { favorites });
+    const backup = await buildBackup(settings, { favorites }, siteNavigation);
     if (kind === 'json') {
       downloadJsonBackup(backup);
       showToast(text.exportedJson);
@@ -1274,6 +1294,7 @@ export default function App() {
     const payload = buildCloudSyncPayload({
       settings,
       favoriteSites,
+      siteNavigation,
       metadata,
       previousRemoteVersion,
     });
@@ -1289,7 +1310,7 @@ export default function App() {
 
   const applyRemoteCloudSyncState = async (payload: CloudSyncPayload) => {
     const resolved = resolveCloudFavoriteSites(payload.data.favoriteSites, allBookmarks);
-    await replaceFromCloudSync(payload.data.settings, resolved.favorites);
+    await replaceFromCloudSync(payload.data.settings, resolved.favorites, payload.data.siteNavigation);
     const metadata = await getCloudSyncMetadata();
     await setCloudSyncMetadata({
       ...metadata,
@@ -2130,6 +2151,15 @@ ${serializedContext}
               <span>© 2026 KunTab. 让书签管理更高效</span>
             </footer>
           </section>
+        )}
+
+        {activeTab === 'site-navigator' && (
+          <SiteNavigatorPage
+            data={siteNavigation}
+            language={settings.language}
+            onChange={syncSiteNavigation}
+            onToast={showToast}
+          />
         )}
 
         {activeTab === 'bookmarks' && (
@@ -3248,6 +3278,9 @@ ${serializedContext}
       {/* Cloud Sync Conflict Modal */}
       {cloudSyncConflict && (() => {
         const diffFavorites = favorites.length !== cloudSyncConflict.data.favoriteSites.length;
+        const localSiteNavSummary = `${siteNavigation.categories.length} 个分类 / ${siteNavigation.items.length} 个网站`;
+        const remoteSiteNavSummary = `${cloudSyncConflict.data.siteNavigation.categories.length} 个分类 / ${cloudSyncConflict.data.siteNavigation.items.length} 个网站`;
+        const diffSiteNavigation = localSiteNavSummary !== remoteSiteNavSummary;
         const diffTheme = settings.theme !== cloudSyncConflict.data.settings.theme;
         const diffEngine = settings.searchEngine !== cloudSyncConflict.data.settings.searchEngine;
         const diffStartPage = settings.startPage !== cloudSyncConflict.data.settings.startPage;
@@ -3260,6 +3293,7 @@ ${serializedContext}
 
         const hasGeneralDiffs = 
           diffFavorites ||
+          diffSiteNavigation ||
           diffTheme ||
           diffEngine ||
           diffStartPage ||
@@ -3311,7 +3345,7 @@ ${serializedContext}
                   {!hasGeneralDiffs && !hasAiDiffs && (
                     <div className="conflict-no-diffs-placeholder">
                       <CheckCircle2 size={28} />
-                      <p>所有配置与常用书签均完全一致，无冲突配置项</p>
+                      <p>所有配置、常用书签与网址导航均完全一致，无冲突配置项</p>
                     </div>
                   )}
 
@@ -3339,6 +3373,27 @@ ${serializedContext}
                               <div className="diff-val remote-val" title={`${cloudSyncConflict.data.favoriteSites.length} 个书签`}>
                                 <span className="diff-label">云端:</span>
                                 <span className="diff-text">{cloudSyncConflict.data.favoriteSites.length} 个书签</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Site Navigator */}
+                        {diffSiteNavigation && (
+                          <div className="conflict-diff-row">
+                            <div className="conflict-diff-meta">
+                              <Compass size={14} />
+                              <span>网址导航 (Site Navigator)</span>
+                            </div>
+                            <div className="conflict-diff-values">
+                              <div className="diff-val local-val" title={localSiteNavSummary}>
+                                <span className="diff-label">本地:</span>
+                                <span className="diff-text">{localSiteNavSummary}</span>
+                              </div>
+                              <span className="diff-arrow">→</span>
+                              <div className="diff-val remote-val" title={remoteSiteNavSummary}>
+                                <span className="diff-label">云端:</span>
+                                <span className="diff-text">{remoteSiteNavSummary}</span>
                               </div>
                             </div>
                           </div>

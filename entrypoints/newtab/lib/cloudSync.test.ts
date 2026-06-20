@@ -41,6 +41,11 @@ const remote = (version = 1): CloudSyncPayload => ({
   data: {
     settings: settings(),
     favoriteSites: [],
+    siteNavigation: {
+      categories: [],
+      items: [],
+      updatedAt: 0,
+    },
   },
 });
 
@@ -78,6 +83,17 @@ describe('decideCloudSyncDirection', () => {
 describe('parseCloudSyncPayload', () => {
   it('accepts a valid payload', () => {
     expect(parseCloudSyncPayload(remote(3)).remoteVersion).toBe(3);
+  });
+
+  it('accepts legacy payloads without site navigation data', () => {
+    const legacy = remote(3) as any;
+    delete legacy.data.siteNavigation;
+
+    expect(parseCloudSyncPayload(legacy).data.siteNavigation).toEqual({
+      categories: [],
+      items: [],
+      updatedAt: 0,
+    });
   });
 
   it('rejects wrong app name', () => {

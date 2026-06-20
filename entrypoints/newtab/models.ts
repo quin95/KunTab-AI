@@ -1,4 +1,4 @@
-export type NavTab = 'home' | 'bookmarks' | 'two-factor' | 'backup' | 'settings' | 'ai-assistant';
+export type NavTab = 'home' | 'site-navigator' | 'bookmarks' | 'two-factor' | 'backup' | 'settings' | 'ai-assistant';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type SearchEngineId = 'google' | 'baidu' | 'bing' | 'github' | 'chatgpt' | 'youtube';
@@ -49,6 +49,7 @@ export interface CloudSyncFavoriteSite {
 export interface CloudSyncData {
   settings: AppSettings;
   favoriteSites: CloudSyncFavoriteSite[];
+  siteNavigation: SiteNavigationData;
 }
 
 export interface CloudSyncPayload {
@@ -121,6 +122,32 @@ export interface BackupFavoriteSite {
   url: string;
 }
 
+export interface SiteNavCategory {
+  id: string;
+  name: string;
+  parentId?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SiteNavItem {
+  id: string;
+  title: string;
+  url: string;
+  categoryId: string;
+  iconUrl?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SiteNavigationData {
+  categories: SiteNavCategory[];
+  items: SiteNavItem[];
+  updatedAt: number;
+}
+
 export interface RecentOpenItem {
   id: string;
   title: string;
@@ -163,11 +190,12 @@ export interface BookmarkBackupNode {
 
 export interface BackupData {
   app: 'kuntab';
-  version: 2;
+  version: 2 | 3;
   exportedAt: number;
   tree: BookmarkBackupNode[];
   favoriteSites: BackupFavoriteSite[];
   settings: AppSettings;
+  siteNavigation: SiteNavigationData;
 }
 
 export interface ChatMessage {

@@ -5,8 +5,10 @@ import type {
   CloudSyncPayload,
   FavoritesState,
   FlatBookmark,
+  SiteNavigationData,
 } from '../models';
 import { ensureHttpUrl } from './utils';
+import { DEFAULT_SITE_NAVIGATION, sanitizeSiteNavigationData } from './siteNavigator';
 
 export type CloudSyncDirection = 'upload-initialize' | 'upload' | 'download' | 'noop' | 'conflict';
 
@@ -30,6 +32,7 @@ export function sanitizeSettingsForCloud(settings: AppSettings): AppSettings {
 export function buildCloudSyncPayload(params: {
   settings: AppSettings;
   favoriteSites: CloudSyncFavoriteSite[];
+  siteNavigation: SiteNavigationData;
   metadata: CloudSyncMetadata;
   previousRemoteVersion: number;
 }): CloudSyncPayload {
@@ -42,6 +45,7 @@ export function buildCloudSyncPayload(params: {
     data: {
       settings: sanitizeSettingsForCloud(params.settings),
       favoriteSites: params.favoriteSites,
+      siteNavigation: sanitizeSiteNavigationData(params.siteNavigation),
     },
   };
 }
@@ -61,7 +65,14 @@ export function parseCloudSyncPayload(value: unknown): CloudSyncPayload {
     throw new Error('远端同步数据不完整');
   }
 
-  return payload as CloudSyncPayload;
+  return {
+    ...(payload as CloudSyncPayload),
+    data: {
+      settings: payload.data.settings,
+      favoriteSites: payload.data.favoriteSites,
+      siteNavigation: sanitizeSiteNavigationData(payload.data.siteNavigation ?? DEFAULT_SITE_NAVIGATION),
+    },
+  };
 }
 
 export function collectCloudFavoriteSites(

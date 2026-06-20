@@ -1,7 +1,8 @@
-import type { AppSettings, BackupData, BookmarkBackupNode, FavoritesState, FlatBookmark } from '../models';
+import type { AppSettings, BackupData, BookmarkBackupNode, FavoritesState, FlatBookmark, SiteNavigationData } from '../models';
 import { type BookmarkNode, flattenBookmarks, getBookmarkTree } from './bookmarks';
 import { downloadTextFile, ensureHttpUrl } from './utils';
 import { replaceFromBackup } from './storage';
+import { DEFAULT_SITE_NAVIGATION, sanitizeSiteNavigationData } from './siteNavigator';
 
 const ext = ((globalThis as any).browser ?? (globalThis as any).chrome) as any;
 
@@ -15,7 +16,11 @@ function toBackupNode(node: BookmarkNode): BookmarkBackupNode {
   };
 }
 
-export async function buildBackup(settings: AppSettings, favorites: FavoritesState): Promise<BackupData> {
+export async function buildBackup(
+  settings: AppSettings,
+  favorites: FavoritesState,
+  siteNavigation: SiteNavigationData,
+): Promise<BackupData> {
   const tree = await getBookmarkTree();
   const topLevel = tree[0]?.children ?? tree;
   const bookmarkById = new Map(flattenBookmarks(tree).map((bookmark) => [bookmark.id, bookmark]));
@@ -29,11 +34,12 @@ export async function buildBackup(settings: AppSettings, favorites: FavoritesSta
 
   return {
     app: 'kuntab',
-    version: 2,
+    version: 3,
     exportedAt: Date.now(),
     tree: topLevel.map(toBackupNode),
     favoriteSites,
     settings,
+    siteNavigation: sanitizeSiteNavigationData(siteNavigation),
   };
 }
 
@@ -101,17 +107,26 @@ export function downloadHtmlBackup(backup: BackupData) {
 }
 
 export function parseBackupJson(content: string): BackupData {
-  const parsed = JSON.parse(content) as BackupData & { app?: string };
+  const parsed = JSON.parse(content) as Partial<BackupData> & { app?: string; version?: number };
   if (
     !parsed ||
     parsed.app !== 'kuntab' ||
-    parsed.version !== 2 ||
+    (parsed.version !== 2 && parsed.version !== 3) ||
     !Array.isArray(parsed.tree) ||
-    !Array.isArray(parsed.favoriteSites)
+    !Array.isArray(parsed.favoriteSites) ||
+    !parsed.settings
   ) {
     throw new Error('无效的备份文件');
   }
-  return parsed;
+  return {
+    app: 'kuntab',
+    version: parsed.version,
+    exportedAt: parsed.exportedAt ?? Date.now(),
+    tree: parsed.tree,
+    favoriteSites: parsed.favoriteSites,
+    settings: parsed.settings,
+    siteNavigation: sanitizeSiteNavigationData(parsed.siteNavigation ?? DEFAULT_SITE_NAVIGATION),
+  };
 }
 
 function normalizeUrl(raw: string): string {
@@ -207,6 +222,10 @@ export async function resolveBackupFavorites(backup: BackupData): Promise<Favori
   return { favorites: nextFavorites };
 }
 
-export async function applyBackupConfig(settings: AppSettings, favorites: FavoritesState): Promise<void> {
-  await replaceFromBackup(settings, favorites);
+export async function applyBackupConfig(
+  settings: AppSettings,
+  favorites: FavoritesState,
+  siteNavigation: SiteNavigationData,
+): Promise<void> {
+  await replaceFromBackup(settings, favorites, siteNavigation);
 }
