@@ -5193,7 +5193,7 @@ select:focus {
   gap: 0.65rem;
 }
 
-.two-factor-empty svg {
+.two-factor-empty > svg {
   color: var(--primary);
 }
 
