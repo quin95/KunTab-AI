@@ -730,9 +730,6 @@ export function TwoFactorPage({
           <div className="modal-card two-factor-form-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3>{editingEntry ? text.editEntry : text.addEntry}</h3>
-              <button onClick={() => setShowForm(false)} aria-label="close">
-                <X size={18} />
-              </button>
             </div>
             <div className="modal-body">
               <div className="modal-field">
