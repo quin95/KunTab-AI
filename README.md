@@ -43,8 +43,11 @@
 ### ⚙️ System Settings
 ![System Settings Preview](assets/screenshots/kuntab-6.png)
 
-### 🔑 2FA Authenticator (New)
-![2FA Authenticator Preview](assets/screenshots/kuntab-7.png)
+### 🔑 2FA Authenticator (Locked/Unlock Screen)
+![2FA Authenticator Locked/Unlock Screen Preview](assets/screenshots/kuntab-8.png)
+
+### 🔑 2FA Authenticator (Unlocked/Dashboard Screen)
+![2FA Authenticator Unlocked/Dashboard Screen Preview](assets/screenshots/kuntab-9.png)
 
 ---
 

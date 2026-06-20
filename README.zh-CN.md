@@ -43,8 +43,11 @@
 ### ⚙️ 个性化系统设置
 ![个性化系统设置预览](assets/screenshots/kuntab-6.png)
 
-### 🔑 2FA 动态验证器 (新)
-![2FA 动态验证器预览](assets/screenshots/kuntab-7.png)
+### 🔑 2FA 动态验证器 (锁定/解锁界面)
+![2FA 动态验证器锁定/解锁界面预览](assets/screenshots/kuntab-8.png)
+
+### 🔑 2FA 动态验证器 (已解锁/取码界面)
+![2FA 动态验证器已解锁/取码界面预览](assets/screenshots/kuntab-9.png)
 
 ---
 
