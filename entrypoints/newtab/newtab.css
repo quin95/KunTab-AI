@@ -4693,3 +4693,608 @@ select:focus {
   border-color: rgba(255, 255, 255, 0.05);
 }
 
+/* 2FA Authenticator */
+.two-factor-page {
+  position: relative;
+  z-index: 1;
+  padding: 2rem;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.two-factor-page-locked {
+  justify-content: flex-start;
+  padding-top: clamp(2rem, 5vh, 4rem);
+}
+
+.two-factor-auth-shell {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(380px, 0.95fr);
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.two-factor-auth-container {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.two-factor-unlock-card.centered-card {
+  border-radius: var(--radius-lg);
+  padding: 2.25rem 2rem;
+  min-height: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.two-factor-unlock-card-header {
+  margin-bottom: 1.5rem;
+}
+
+.two-factor-unlock-card-header h2 {
+  font-size: 1.45rem;
+  font-weight: 750;
+  margin: 0.5rem 0 0.4rem;
+  color: var(--text);
+}
+
+.two-factor-unlock-card-header p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.two-factor-unlock-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  margin-bottom: 1.5rem;
+}
+
+.two-factor-unlock-card-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.two-factor-unlock-actions.single-action {
+  margin-top: 0.5rem;
+}
+
+.primary.full-width {
+  width: 100%;
+}
+
+.two-factor-help-accordion {
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px);
+  padding: 0.85rem 1rem;
+  transition: all 0.3s ease;
+}
+
+:root[data-theme='dark'] .two-factor-help-accordion {
+  border-color: rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.app-shell.has-scenic-bg .two-factor-help-accordion {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .two-factor-help-accordion {
+  background: rgba(30, 41, 59, 0.45);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.two-factor-help-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
+}
+
+.two-factor-help-toggle:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.two-factor-help-toggle .toggle-arrow {
+  color: var(--muted);
+  transition: transform 0.25s ease;
+}
+
+.two-factor-help-toggle .toggle-arrow.expanded {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.modern-accordion-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-top 0.3s ease;
+}
+
+.modern-accordion-content.expanded {
+  max-height: 400px;
+  opacity: 1;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px dashed var(--line);
+}
+
+.modern-accordion-content > div {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(37, 99, 235, 0.035);
+  border: 1px solid rgba(37, 99, 235, 0.08);
+}
+
+:root[data-theme='dark'] .modern-accordion-content > div {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.1);
+}
+
+.two-factor-hero,
+.two-factor-toolbar,
+.two-factor-unlock-card,
+.two-factor-cloud-card,
+.two-factor-empty,
+.two-factor-entry-card {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(18px);
+}
+
+:root[data-theme='dark'] .two-factor-hero,
+:root[data-theme='dark'] .two-factor-toolbar,
+:root[data-theme='dark'] .two-factor-unlock-card,
+:root[data-theme='dark'] .two-factor-cloud-card,
+:root[data-theme='dark'] .two-factor-empty,
+:root[data-theme='dark'] .two-factor-entry-card {
+  background: rgba(15, 23, 42, 0.74);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+}
+
+.two-factor-hero,
+.two-factor-toolbar {
+  border-radius: 8px;
+  padding: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.two-factor-page-locked .two-factor-hero {
+  min-height: 320px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  padding: 1.65rem;
+}
+
+.two-factor-hero-copy {
+  max-width: 560px;
+}
+
+.two-factor-intro-list {
+  display: grid;
+  gap: 0.7rem;
+  margin: 1rem 0;
+}
+
+.two-factor-intro-list > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid rgba(37, 99, 235, 0.1);
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.045);
+}
+
+:root[data-theme='dark'] .two-factor-intro-list > div {
+  border-color: rgba(147, 197, 253, 0.12);
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.two-factor-intro-list strong {
+  color: var(--text);
+  font-size: 0.83rem;
+  font-weight: 850;
+}
+
+.two-factor-intro-list span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.two-factor-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-bottom: 0.45rem;
+}
+
+.two-factor-hero h2,
+.two-factor-toolbar h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.55rem;
+  letter-spacing: 0;
+}
+
+.two-factor-hero p,
+.two-factor-toolbar p,
+.two-factor-cloud-card p,
+.two-factor-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.two-factor-lock-visual {
+  width: 74px;
+  height: 74px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(16, 185, 129, 0.14));
+  flex: 0 0 auto;
+}
+
+.two-factor-page-locked .two-factor-lock-visual {
+  width: 88px;
+  height: 88px;
+  align-self: flex-end;
+}
+
+.two-factor-unlock-card {
+  border-radius: 8px;
+  padding: 1.65rem;
+  display: grid;
+  align-content: center;
+  gap: 1.05rem;
+  max-width: none;
+  min-height: 320px;
+}
+
+.two-factor-unlock-card label,
+.two-factor-form-modal .modal-field label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 750;
+}
+
+.two-factor-unlock-card input {
+  min-height: 46px;
+}
+
+.two-factor-unlock-actions,
+.two-factor-toolbar-actions,
+.two-factor-cloud-actions,
+.two-factor-entry-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.two-factor-unlock-actions button,
+.two-factor-toolbar-actions button,
+.two-factor-cloud-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 38px;
+}
+
+.two-factor-unlock-actions {
+  margin-top: 0.25rem;
+}
+
+.two-factor-unlock-actions button {
+  min-width: 150px;
+}
+
+.two-factor-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.two-factor-search {
+  min-width: 240px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  backdrop-filter: blur(14px);
+}
+
+:root[data-theme='dark'] .two-factor-search {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+.two-factor-search svg {
+  color: var(--muted);
+  flex: 0 0 auto;
+}
+
+.two-factor-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 24px;
+}
+
+.two-factor-countdown {
+  --totp-progress: 1;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background:
+    radial-gradient(circle at center, var(--surface) 55%, transparent 56%),
+    conic-gradient(var(--primary) calc(var(--totp-progress) * 360deg), rgba(148, 163, 184, 0.24) 0deg);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.two-factor-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.two-factor-entry-card {
+  border-radius: 8px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.two-factor-entry-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.two-factor-entry-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--primary);
+  background: rgba(37, 99, 235, 0.1);
+}
+
+.two-factor-entry-main h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  letter-spacing: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.two-factor-entry-main p,
+.two-factor-entry-main small {
+  display: block;
+  margin: 0.16rem 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.two-factor-code {
+  min-width: 106px;
+  min-height: 48px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary);
+  font-size: 1.55rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+.two-factor-entry-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.two-factor-entry-actions button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.two-factor-entry-actions button:last-child {
+  color: var(--danger);
+}
+
+.two-factor-cloud-card {
+  border-radius: 8px;
+  padding: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.two-factor-cloud-card h3 {
+  margin: 0 0 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 1rem;
+}
+
+.two-factor-empty {
+  border-radius: 8px;
+  padding: 2.4rem 1.25rem;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 0.65rem;
+}
+
+.two-factor-empty svg {
+  color: var(--primary);
+}
+
+.two-factor-empty h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.two-factor-form-modal {
+  max-width: 520px;
+}
+
+.two-factor-conflict-modal {
+  max-width: 680px;
+}
+
+.two-factor-conflict-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.two-factor-conflict-grid > div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.9rem;
+  background: var(--surface);
+  display: grid;
+  gap: 0.35rem;
+}
+
+.two-factor-conflict-grid h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+}
+
+.two-factor-conflict-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-card-highlight {
+  animation: settingsTargetPulse 1.45s ease-out;
+  outline: 2px solid rgba(37, 99, 235, 0.38);
+  outline-offset: 3px;
+}
+
+@keyframes settingsTargetPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.28), 0 18px 50px rgba(15, 23, 42, 0.08);
+  }
+  65% {
+    box-shadow: 0 0 0 12px rgba(37, 99, 235, 0), 0 18px 50px rgba(15, 23, 42, 0.08);
+  }
+  100% {
+    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  }
+}
+
+@media (max-width: 760px) {
+  .two-factor-page {
+    padding: 1rem;
+  }
+
+  .two-factor-auth-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .two-factor-page-locked .two-factor-hero,
+  .two-factor-unlock-card {
+    min-height: auto;
+  }
+
+  .two-factor-hero,
+  .two-factor-toolbar,
+  .two-factor-cloud-card,
+  .two-factor-control-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .two-factor-search {
+    min-width: 0;
+  }
+
+  .two-factor-entry-card {
+    grid-template-columns: 1fr;
+  }
+
+  .two-factor-code {
+    width: 100%;
+  }
+
+  .two-factor-conflict-grid {
+    grid-template-columns: 1fr;
+  }
+}
