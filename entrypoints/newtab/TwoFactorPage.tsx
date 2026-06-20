@@ -237,7 +237,7 @@ export function TwoFactorPage({
   const [syncing, setSyncing] = useState(false);
   const [cloudConflict, setCloudConflict] = useState<TwoFactorCloudPayload | null>(null);
   const [localSyncMetadata, setLocalSyncMetadata] = useState<TwoFactorSyncMetadata | null>(null);
-  const [showIntro, setShowIntro] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const remainingSeconds = getTotpRemainingSeconds(now);
   const progress = getTotpProgress(now);
