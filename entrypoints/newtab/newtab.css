@@ -4719,18 +4719,35 @@ select:focus {
 }
 
 .two-factor-auth-container {
-  width: min(420px, 100%);
+  width: min(800px, 100%);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
-.two-factor-unlock-card.centered-card {
+.two-factor-unlock-card.split-card {
   border-radius: var(--radius-lg);
-  padding: 2.25rem 2rem;
+  padding: 2.25rem;
   min-height: auto;
   box-shadow: var(--shadow-lg);
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 2.25rem;
+  align-items: stretch;
+}
+
+.two-factor-unlock-left {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  padding-right: 2.25rem;
+}
+
+.two-factor-unlock-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .two-factor-unlock-card-header {
@@ -4771,93 +4788,6 @@ select:focus {
 
 .primary.full-width {
   width: 100%;
-}
-
-.two-factor-help-accordion {
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(14px);
-  padding: 0.85rem 1rem;
-  transition: all 0.3s ease;
-}
-
-:root[data-theme='dark'] .two-factor-help-accordion {
-  border-color: rgba(148, 163, 184, 0.12);
-  background: rgba(15, 23, 42, 0.55);
-}
-
-.app-shell.has-scenic-bg .two-factor-help-accordion {
-  background: rgba(255, 255, 255, 0.45);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-:root[data-theme='dark'] .app-shell.has-scenic-bg .two-factor-help-accordion {
-  background: rgba(30, 41, 59, 0.45);
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-.two-factor-help-toggle {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: transparent;
-  border: none;
-  padding: 0.25rem 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  font-weight: 700;
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.2s ease;
-}
-
-.two-factor-help-toggle:hover {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text);
-}
-
-.two-factor-help-toggle .toggle-arrow {
-  color: var(--muted);
-  transition: transform 0.25s ease;
-}
-
-.two-factor-help-toggle .toggle-arrow.expanded {
-  transform: rotate(180deg);
-  color: var(--primary);
-}
-
-.modern-accordion-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  margin-top: 0;
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin-top 0.3s ease;
-}
-
-.modern-accordion-content.expanded {
-  max-height: 400px;
-  opacity: 1;
-  margin-top: 0.85rem;
-  padding-top: 0.85rem;
-  border-top: 1px dashed var(--line);
-}
-
-.modern-accordion-content > div {
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--radius-sm);
-  background: rgba(37, 99, 235, 0.035);
-  border: 1px solid rgba(37, 99, 235, 0.08);
-}
-
-:root[data-theme='dark'] .modern-accordion-content > div {
-  background: rgba(59, 130, 246, 0.05);
-  border-color: rgba(59, 130, 246, 0.1);
 }
 
 .two-factor-hero,
@@ -5272,6 +5202,19 @@ select:focus {
   .two-factor-page-locked .two-factor-hero,
   .two-factor-unlock-card {
     min-height: auto;
+  }
+
+  .two-factor-unlock-card.split-card {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+    padding: 1.5rem;
+  }
+
+  .two-factor-unlock-left {
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+    padding-right: 0;
+    padding-bottom: 1.75rem;
   }
 
   .two-factor-hero,
