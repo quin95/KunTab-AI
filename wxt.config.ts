@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: 'KunTab',
     description: '一个基于 Chrome 浏览器的新标签页书签管理插件。',
-    version: '1.5.0',
+    version: '1.6.0',
     permissions: ['bookmarks', 'storage', 'favicon', 'activeTab'],
     host_permissions: ['https://*/*'],
     chrome_url_overrides: {

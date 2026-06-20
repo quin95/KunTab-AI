@@ -43,6 +43,20 @@
 ### ⚙️ System Settings
 ![System Settings Preview](assets/screenshots/kuntab-6.png)
 
+### 🔑 2FA Authenticator (New)
+![2FA Authenticator Preview](assets/screenshots/kuntab-7.png)
+
+---
+
+## 📢 Changelog (版本更新记录)
+
+### v1.6.0 (2026-06-20)
+- 🎨 **全新 2FA 验证器看板设计**：将原本零散的 2FA 锁、搜索框、同步配置和账号列表统一整合进一个高透磨砂玻璃（Glassmorphism）质感的悬浮大面板中，页面更具整体美感。
+- ⚡ **交互体验升级**：卡片的“复制、编辑、删除”操作更改为鼠标 Hover（悬停）时才淡入显现，大大节省空间；验证码使用大字号等宽（monospace）字体 and 微弱霓虹发光效果，点击整块卡片直接快速复制。
+- ⏱️ **倒计时与搜索栏融合**：重构了倒计时圆环，其高度与搜索栏完全对齐，视觉布局更佳。
+- ☁️ **云同步卡片精简**：精简为看板底部的一条小巧状态栏，只在需要时展开详细配置。
+- 📱 **移动端响应式升级**：对 2FA 看板和账号卡片在窄屏下的表现进行了深度适配。
+
 ---
 
 ## ✨ Key Features
