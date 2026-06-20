@@ -214,6 +214,9 @@ async function readErrorResponse(method: 'GET' | 'PUT', response: Response): Pro
 
 export async function getS3Json<T>(settings: CloudSyncSettings, key: string): Promise<T | null> {
   const url = buildPathStyleObjectUrl(settings.endpoint, settings.bucket, key);
+  // Add a unique timestamp parameter to avoid browser or CDN caching
+  url.searchParams.set('t', Date.now().toString());
+
   const headers = await buildSignedHeaders({
     method: 'GET',
     url,
@@ -222,7 +225,11 @@ export async function getS3Json<T>(settings: CloudSyncSettings, key: string): Pr
   });
   const response = await fetch(url, {
     method: 'GET',
-    headers,
+    headers: {
+      ...headers,
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
   });
 
   if (response.status === 404) return null;

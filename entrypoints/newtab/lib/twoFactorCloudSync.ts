@@ -7,13 +7,41 @@ import { parseEncryptedTwoFactorVault } from './twoFactorVault';
 
 export type TwoFactorCloudSyncDirection = 'upload-initialize' | 'upload' | 'download' | 'noop' | 'conflict';
 
+function isSameEncryptedTwoFactorVault(
+  left: EncryptedTwoFactorVault,
+  right: EncryptedTwoFactorVault,
+): boolean {
+  return (
+    left.app === right.app &&
+    left.type === right.type &&
+    left.schemaVersion === right.schemaVersion &&
+    left.updatedAt === right.updatedAt &&
+    left.entryCount === right.entryCount &&
+    left.kdf.name === right.kdf.name &&
+    left.kdf.hash === right.kdf.hash &&
+    left.kdf.iterations === right.kdf.iterations &&
+    left.kdf.salt === right.kdf.salt &&
+    left.cipher.name === right.cipher.name &&
+    left.cipher.iv === right.cipher.iv &&
+    left.ciphertext === right.ciphertext &&
+    left.passphraseHint === right.passphraseHint
+  );
+}
+
 export function decideTwoFactorCloudSyncDirection(
   metadata: TwoFactorSyncMetadata,
   remote: TwoFactorCloudPayload | null,
+  localVault?: EncryptedTwoFactorVault | null,
 ): TwoFactorCloudSyncDirection {
   if (!remote) return 'upload-initialize';
-  const localChanged = metadata.localVersion !== metadata.lastSyncedLocalVersion;
+  const metadataLocalChanged = metadata.localVersion !== metadata.lastSyncedLocalVersion;
   const remoteChanged = remote.remoteVersion !== metadata.lastRemoteVersion;
+  const syncedRemoteStillDiffersFromLocal =
+    localVault !== null &&
+    localVault !== undefined &&
+    remote.remoteVersion === metadata.lastRemoteVersion &&
+    !isSameEncryptedTwoFactorVault(localVault, remote.vault);
+  const localChanged = metadataLocalChanged || syncedRemoteStillDiffersFromLocal;
   if (localChanged && remoteChanged) return 'conflict';
   if (localChanged) return 'upload';
   if (remoteChanged) return 'download';

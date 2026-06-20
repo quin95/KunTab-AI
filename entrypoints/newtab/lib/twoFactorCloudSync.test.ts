@@ -53,6 +53,17 @@ describe('two-factor cloud sync', () => {
     expect(decideTwoFactorCloudSyncDirection(metadata({ localVersion: 2 }), remote(2))).toBe('conflict');
   });
 
+  it('uploads when local vault content changed but metadata still points at the same remote version', () => {
+    const localVault = {
+      ...encryptedVault(),
+      updatedAt: 200,
+      entryCount: 1,
+      ciphertext: 'bmV3LWNpcGhlcnRleHQ=',
+    };
+
+    expect(decideTwoFactorCloudSyncDirection(metadata(), remote(1), localVault)).toBe('upload');
+  });
+
   it('builds a versioned encrypted cloud payload', () => {
     expect(
       buildTwoFactorCloudPayload({

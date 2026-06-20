@@ -498,7 +498,7 @@ export function TwoFactorPage({
       const metadata = await getTwoFactorSyncMetadata();
       const rawRemote = await getS3Json<unknown>(cloudSyncSettings, key);
       const remote = rawRemote ? parseTwoFactorCloudPayload(rawRemote) : null;
-      const direction = decideTwoFactorCloudSyncDirection(metadata, remote);
+      const direction = decideTwoFactorCloudSyncDirection(metadata, remote, vault);
 
       if (direction === 'upload-initialize' || direction === 'upload') {
         const payload = await uploadCloudState(remote?.remoteVersion ?? 0);

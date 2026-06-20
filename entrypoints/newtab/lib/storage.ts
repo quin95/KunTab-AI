@@ -128,6 +128,11 @@ export async function updateCloudSyncSettings(patch: Partial<CloudSyncSettings>)
       ...metadata,
       lastRemoteVersion: 0,
     });
+    const twoFactorMetadata = await getTwoFactorSyncMetadata();
+    await setTwoFactorSyncMetadata({
+      ...twoFactorMetadata,
+      lastRemoteVersion: 0,
+    });
   }
   return merged;
 }
