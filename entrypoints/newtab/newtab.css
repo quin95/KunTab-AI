@@ -1295,6 +1295,7 @@ select:focus {
   justify-content: flex-end;
   background: rgba(15, 23, 42, 0.28);
   backdrop-filter: blur(4px);
+  animation: fadeInModal 0.2s ease-out;
 }
 
 .site-drawer {
@@ -1305,12 +1306,13 @@ select:focus {
   box-shadow: -24px 0 50px rgba(15, 23, 42, 0.22);
   display: flex;
   flex-direction: column;
-  animation: drawerIn 0.22s ease;
+  animation: drawerIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
 }
 
 @keyframes drawerIn {
-  from { transform: translateX(24px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from { transform: translate3d(24px, 0, 0); opacity: 0; }
+  to { transform: translate3d(0, 0, 0); opacity: 1; }
 }
 
 .site-drawer-head {
