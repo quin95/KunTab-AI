@@ -76,6 +76,10 @@ export function getSiteIconCandidates(item: Pick<SiteNavItem, 'url' | 'iconUrl'>
   const direct = directSiteFaviconOf(item.url);
   if (direct) candidates.push(direct);
 
+  // 4. DuckDuckGo Favicon Service
+  const ddg = duckDuckGoFaviconOf(item.url);
+  if (ddg) candidates.push(ddg);
+
   return candidates.filter((url, index, list) => url && list.indexOf(url) === index);
 }
 

@@ -170,6 +170,8 @@ const LOCALE_TEXT = {
     searchHint: '支持书签搜索和命令搜索（g/bd/b/gh/ai/yt）',
     searchPlaceholder: '搜索书签或输入命令，快速访问或搜索全网...',
     search: '搜索',
+    sourceBookmark: '书签',
+    sourceSiteNavigator: '网址导航',
     favorites: '常用书签',
     manageFavorites: '管理常用',
     remove: '移除',
@@ -339,6 +341,8 @@ const LOCALE_TEXT = {
     searchHint: 'Supports bookmark search and command search (g/bd/b/gh/ai/yt)',
     searchPlaceholder: 'Search bookmarks or use a command, e.g. g react hooks',
     search: 'Search',
+    sourceBookmark: 'Bookmark',
+    sourceSiteNavigator: 'Site Navigator',
     favorites: 'Favorites',
     manageFavorites: 'Manage',
     remove: 'Remove',
@@ -1065,12 +1069,43 @@ export default function App() {
     if (!query) return [];
     const withoutCommand = parseSearchCommand(query).query.toLowerCase();
     if (!withoutCommand) return [];
-    return allBookmarks
+
+    const matchedBookmarks = allBookmarks
       .filter((bookmark) => {
         return bookmark.title.toLowerCase().includes(withoutCommand) || bookmark.url.toLowerCase().includes(withoutCommand);
       })
-      .slice(0, 8);
-  }, [allBookmarks, homeQuery]);
+      .map((bookmark) => ({
+        id: bookmark.id,
+        title: bookmark.title,
+        url: bookmark.url,
+        source: 'bookmark' as const,
+        groupName: bookmark.folderName || '全部书签',
+        parentId: bookmark.parentId,
+        folderId: bookmark.folderId,
+        folderName: bookmark.folderName,
+        folderPath: bookmark.folderPath,
+        dateAdded: bookmark.dateAdded,
+      }));
+
+    const matchedSiteNav = siteNavigation.items
+      .filter((item) => {
+        return item.title.toLowerCase().includes(withoutCommand) || item.url.toLowerCase().includes(withoutCommand);
+      })
+      .map((item) => {
+        const category = siteNavigation.categories.find((c) => c.id === item.categoryId);
+        return {
+          id: item.id,
+          title: item.title,
+          url: item.url,
+          source: 'site-navigator' as const,
+          groupName: category ? category.name : '',
+          folderName: category ? category.name : '',
+          folderPath: category ? category.name : '',
+        };
+      });
+
+    return [...matchedBookmarks, ...matchedSiteNav].slice(0, 8);
+  }, [allBookmarks, siteNavigation, homeQuery]);
 
   const favoritePickerMatches = useMemo(() => {
     const query = favoriteSearch.trim().toLowerCase();
@@ -2178,12 +2213,14 @@ ${serializedSiteNavigationContext}
 
               {homeSearchMatches.length > 0 && (
                 <div className="suggestion-list">
-                  {homeSearchMatches.map((bookmark) => (
-                    <button key={bookmark.id} onClick={() => onOpenBookmark(bookmark)}>
-                      <img src={faviconOf(bookmark.url)} alt="" />
-                      <span>{bookmark.title}</span>
-                      <span className={getFolderTagClass(bookmark.folderName)}>
-                        {bookmark.folderName || '全部书签'}
+                  {homeSearchMatches.map((item) => (
+                    <button key={`${item.source}-${item.id}`} onClick={() => onOpenBookmark(item as any)}>
+                      <img src={faviconOf(item.url)} alt="" />
+                      <span>{item.title}</span>
+                      <span className={item.source === 'bookmark' ? getFolderTagClass(item.groupName) : 'folder-pill tag-sitenav'}>
+                        {item.source === 'bookmark'
+                          ? `${text.sourceBookmark} · ${item.groupName || text.allBookmarks}`
+                          : `${text.sourceSiteNavigator} · ${item.groupName}`}
                       </span>
                     </button>
                   ))}
