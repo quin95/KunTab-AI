@@ -1730,16 +1730,22 @@ select:focus {
 .bookmark-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
-  gap: 1.5rem;
-  align-items: start;
+  gap: 0;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
 }
 
 /* Folders Sidebar Left Panel */
 .folder-tree {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  border: none;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-right: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   height: calc(100vh - 4rem);
@@ -1861,7 +1867,7 @@ select:focus {
 .folder-sidebar-footer {
   padding: 1rem;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: transparent !important;
 }
 
 .app-shell.has-scenic-bg .folder-sidebar-footer {
@@ -1899,6 +1905,7 @@ select:focus {
   flex-direction: column;
   gap: 1.25rem;
   min-height: calc(100vh - 4rem);
+  padding: 0;
 }
 
 .bookmark-top-bar {
@@ -1906,6 +1913,7 @@ select:focus {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  padding: 1.5rem 1.5rem 0.25rem 1.5rem;
 }
 
 /* Bookmark Search Box Styling */
@@ -2035,7 +2043,7 @@ select:focus {
   gap: 1.25rem;
   flex: 1;
   align-content: start;
-  padding: 6px 0;
+  padding: 0.5rem 1.5rem 1.5rem 1.5rem;
 }
 
 .bookmark-card,
@@ -2048,7 +2056,7 @@ select:focus {
   flex-direction: column;
   justify-content: space-between;
   min-height: 140px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -2056,9 +2064,10 @@ select:focus {
 
 .bookmark-card:hover,
 .folder-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--primary);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  background: var(--bg);
+  border-color: var(--primary-soft);
+  box-shadow: var(--shadow);
 }
 
 .bookmark-card.menu-open {
@@ -2119,13 +2128,13 @@ select:focus {
 .bookmark-card-favicon-wrap {
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: var(--radius);
-  background: #ffffff;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: none;
   overflow: hidden;
   padding: 6px;
 }
@@ -2286,13 +2295,20 @@ select:focus {
 /* Dark theme overrides */
 :root[data-theme='dark'] .bookmark-card,
 :root[data-theme='dark'] .folder-card {
-  background: rgba(30, 41, 59, 0.7);
-  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(30, 41, 59, 0.35);
+  border-color: rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme='dark'] .bookmark-card:hover,
+:root[data-theme='dark'] .folder-card:hover {
+  background: rgba(30, 41, 59, 0.6);
+  border-color: var(--primary-soft);
+  box-shadow: var(--shadow-lg);
 }
 
 :root[data-theme='dark'] .bookmark-card-favicon-wrap {
-  background: #1e293b;
-  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(30, 41, 59, 0.8);
+  border: none;
 }
 
 :root[data-theme='dark'] .folder-sidebar-footer {
@@ -2309,9 +2325,9 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: 1rem 1.5rem;
   border-top: 1px solid var(--line);
-  background: var(--surface);
+  background: transparent;
   font-size: 0.88rem;
 }
 
@@ -3380,7 +3396,7 @@ select:focus {
 /* Translucent panels & cards */
 .app-shell.has-scenic-bg .search-card,
 .app-shell.has-scenic-bg .panel,
-.app-shell.has-scenic-bg .folder-tree,
+.app-shell.has-scenic-bg .bookmark-layout,
 .app-shell.has-scenic-bg .bookmark-table-wrap,
 .app-shell.has-scenic-bg .backup-card,
 .app-shell.has-scenic-bg .settings-card {
@@ -3393,7 +3409,7 @@ select:focus {
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .search-card,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .panel,
-:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-tree,
+:root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-layout,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-table-wrap,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .backup-card,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .settings-card {
@@ -3411,6 +3427,14 @@ select:focus {
 :root[data-theme='dark'] .app-shell.has-scenic-bg .search-input-wrap {
   background: rgba(15, 23, 42, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.app-shell.has-scenic-bg .folder-tree {
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .folder-tree {
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .app-shell.has-scenic-bg .quick-engines button {
@@ -3906,32 +3930,36 @@ select:focus {
 /* Glassmorphism for Bookmarks Cards & Folders under Scenic BG */
 .app-shell.has-scenic-bg .bookmark-card,
 .app-shell.has-scenic-bg .folder-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.01);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-card,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .folder-card {
-  background: rgba(30, 41, 59, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: none;
 }
 
 .app-shell.has-scenic-bg .bookmark-card:hover,
 .app-shell.has-scenic-bg .folder-card:hover {
-  background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 :root[data-theme='dark'] .app-shell.has-scenic-bg .bookmark-card:hover,
 :root[data-theme='dark'] .app-shell.has-scenic-bg .folder-card:hover {
-  background: rgba(30, 41, 59, 0.9);
-  border-color: var(--primary);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 /* Glassmorphic Bookmark Search Input under Scenic BG */
