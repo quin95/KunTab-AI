@@ -2116,24 +2116,40 @@ ${serializedSiteNavigationContext}
               <span>{settings.theme === 'dark' ? '浅色模式' : '深色模式'}</span>
             </div>
           </button>
-          <button 
-            className="github-link-btn"
-            onClick={() => openUrl('https://github.com/quin95/KunTab-AI')}
-            title="GitHub 仓库"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              width="18"
-              height="18"
-              stroke="currentColor"
-              strokeWidth="2"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="sidebar-footer-actions">
+            <button 
+              className="github-link-btn"
+              onClick={() => openUrl('https://github.com/quin95/KunTab-AI')}
+              title="GitHub 仓库"
             >
-              <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-            </svg>
-          </button>
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+              </svg>
+            </button>
+            <button 
+              className="telegram-link-btn"
+              onClick={() => openUrl('https://t.me/+J5R-V0TExbA2YTQx')}
+              title="Telegram 群组"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="currentColor"
+              >
+                <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.578.192l-8.533 7.701-.332 4.981c.488 0 .704-.224.977-.489l2.35-2.285 4.887 3.61c.9.497 1.548.241 1.772-.83l3.202-15.084c.328-1.317-.502-1.912-1.361-1.52z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </aside>
 
