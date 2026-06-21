@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type SyntheticEvent } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  Check,
+  ChevronDown,
   Copy,
+  CornerDownRight,
   Edit3,
   ExternalLink,
+  Folder,
   FolderPlus,
   Globe2,
   Layers3,
@@ -169,6 +173,8 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
   const [titleTouched, setTitleTouched] = useState(false);
   const [fetchingTitle, setFetchingTitle] = useState(false);
   const [dragSiteId, setDragSiteId] = useState<string | null>(null);
+  const [dragCategoryId, setDragCategoryId] = useState<string | null>(null);
+  const [dragOverCategoryId, setDragOverCategoryId] = useState<string | null>(null);
   const [deleteCategoryState, setDeleteCategoryState] = useState<DeleteCategoryState | null>(null);
 
   useEffect(() => {
@@ -327,6 +333,39 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
     setDragSiteId(null);
   };
 
+  const onDropCategory = async (targetId: string) => {
+    if (!dragCategoryId || dragCategoryId === targetId) return;
+    const source = data.categories.find((c) => c.id === dragCategoryId);
+    const target = data.categories.find((c) => c.id === targetId);
+    if (!source || !target || (source.parentId || '') !== (target.parentId || '')) return;
+
+    const siblings = data.categories
+      .filter((c) => (c.parentId || '') === (source.parentId || ''))
+      .sort((a, b) => a.order - b.order);
+
+    const sourceIndex = siblings.findIndex((c) => c.id === dragCategoryId);
+    const targetIndex = siblings.findIndex((c) => c.id === targetId);
+
+    if (sourceIndex < 0 || targetIndex < 0) return;
+
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(sourceIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    const orderById = new Map(reordered.map((c, order) => [c.id, order]));
+    const timestamp = Date.now();
+    const next = {
+      ...data,
+      categories: data.categories.map((c) =>
+        orderById.has(c.id) ? { ...c, order: orderById.get(c.id)!, updatedAt: timestamp } : c
+      ),
+      updatedAt: timestamp,
+    };
+    await saveData(next);
+    setDragCategoryId(null);
+    setDragOverCategoryId(null);
+  };
+
   const previewUrl = normalizeSiteUrl(draft.url || 'https://example.com');
   const previewItem: SiteNavItem = {
     id: draft.id || 'preview',
@@ -345,11 +384,31 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
         <div className="site-nav-tabs">
           {topCategories.map((category) => {
             const isActive = parentCategory?.id === category.id;
+            const isDragging = dragCategoryId === category.id;
+            const isDragOver = dragOverCategoryId === category.id;
+            let tabClass = 'site-nav-tab';
+            if (isActive) tabClass += ' active';
+            if (isDragging) tabClass += ' dragging';
+            if (isDragOver) tabClass += ' drag-over';
             return (
               <button
                 key={category.id}
-                className={isActive ? 'site-nav-tab active' : 'site-nav-tab'}
+                className={tabClass}
                 onClick={() => setActiveCategoryId(category.id)}
+                draggable
+                onDragStart={() => setDragCategoryId(category.id)}
+                onDragEnd={() => {
+                  setDragCategoryId(null);
+                  setDragOverCategoryId(null);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (dragCategoryId && dragCategoryId !== category.id) {
+                    setDragOverCategoryId(category.id);
+                  }
+                }}
+                onDragLeave={() => setDragOverCategoryId(null)}
+                onDrop={() => onDropCategory(category.id)}
               >
                 {category.name}
               </button>
@@ -376,15 +435,38 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
           >
             {text.all}
           </button>
-          {subCategories.map((child) => (
-            <button
-              key={child.id}
-              className={activeCategoryId === child.id ? 'site-nav-subtab active' : 'site-nav-subtab'}
-              onClick={() => setActiveCategoryId(child.id)}
-            >
-              {child.name}
-            </button>
-          ))}
+          {subCategories.map((child) => {
+            const isActive = activeCategoryId === child.id;
+            const isDragging = dragCategoryId === child.id;
+            const isDragOver = dragOverCategoryId === child.id;
+            let subtabClass = 'site-nav-subtab';
+            if (isActive) subtabClass += ' active';
+            if (isDragging) subtabClass += ' dragging';
+            if (isDragOver) subtabClass += ' drag-over';
+            return (
+              <button
+                key={child.id}
+                className={subtabClass}
+                onClick={() => setActiveCategoryId(child.id)}
+                draggable
+                onDragStart={() => setDragCategoryId(child.id)}
+                onDragEnd={() => {
+                  setDragCategoryId(null);
+                  setDragOverCategoryId(null);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  if (dragCategoryId && dragCategoryId !== child.id) {
+                    setDragOverCategoryId(child.id);
+                  }
+                }}
+                onDragLeave={() => setDragOverCategoryId(null)}
+                onDrop={() => onDropCategory(child.id)}
+              >
+                {child.name}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -469,16 +551,12 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
               </label>
               <label>
                 <span>{text.category}</span>
-                <select
+                <CategorySelector
+                  categories={data.categories}
                   value={draft.categoryId}
-                  onChange={(event) => setDraft((prev) => ({ ...prev, categoryId: event.target.value }))}
-                >
-                  {sortCategories(data.categories).map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.parentId ? `  - ${category.name}` : category.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(id) => setDraft((prev) => ({ ...prev, categoryId: id }))}
+                  placeholder={text.category}
+                />
               </label>
               <label>
                 <span>{text.siteIcon}</span>
@@ -570,20 +648,15 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
                     })}
                   </p>
                   <div className="modal-select-wrapper">
-                    <select
+                    <CategorySelector
+                      categories={data.categories}
                       value={deleteCategoryState.moveTargetId}
-                      onChange={(event) =>
-                        setDeleteCategoryState((prev) => (prev ? { ...prev, moveTargetId: event.target.value } : prev))
+                      onChange={(id) =>
+                        setDeleteCategoryState((prev) => (prev ? { ...prev, moveTargetId: id } : prev))
                       }
-                    >
-                      {data.categories
-                        .filter((category) => !getCategoryScopeIds(data, deleteCategoryState.category.id).includes(category.id))
-                        .map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.parentId ? `  - ${category.name}` : category.name}
-                          </option>
-                        ))}
-                    </select>
+                      excludeIds={getCategoryScopeIds(data, deleteCategoryState.category.id)}
+                      placeholder={text.category}
+                    />
                   </div>
                 </div>
                 <div className="modal-actions multi-actions">
@@ -621,6 +694,166 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
         </div>
       )}
     </section>
+  );
+}
+
+interface CategorySelectorProps {
+  categories: SiteNavCategory[];
+  value: string;
+  onChange: (id: string) => void;
+  excludeIds?: string[];
+  placeholder?: string;
+}
+
+function CategorySelector({
+  categories,
+  value,
+  onChange,
+  excludeIds = [],
+  placeholder = 'Select Category',
+}: CategorySelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Group and sort categories hierarchically
+  const groupedCategories = useMemo(() => {
+    const excludeSet = new Set(excludeIds);
+    const filtered = categories.filter((c) => !excludeSet.has(c.id));
+    const parents = filtered.filter((c) => !c.parentId).sort((a, b) => a.order - b.order);
+
+    return parents.map((parent) => ({
+      parent,
+      children: filtered.filter((c) => c.parentId === parent.id).sort((a, b) => a.order - b.order),
+    }));
+  }, [categories, excludeIds]);
+
+  // Filter categories based on search term
+  const filteredGrouped = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return groupedCategories;
+
+    return groupedCategories
+      .map(({ parent, children }) => {
+        const parentMatches = parent.name.toLowerCase().includes(term);
+        const filteredChildren = children.filter((child) =>
+          child.name.toLowerCase().includes(term)
+        );
+
+        if (parentMatches || filteredChildren.length > 0) {
+          return {
+            parent,
+            children: parentMatches ? children : filteredChildren,
+          };
+        }
+        return null;
+      })
+      .filter((x): x is typeof groupedCategories[number] => x !== null);
+  }, [groupedCategories, searchTerm]);
+
+  // Find currently selected category item to display label
+  const selectedCategory = useMemo(() => {
+    return categories.find((c) => c.id === value);
+  }, [categories, value]);
+
+  const displayLabel = useMemo(() => {
+    if (!selectedCategory) return placeholder;
+    if (selectedCategory.parentId) {
+      const parent = categories.find((c) => c.id === selectedCategory.parentId);
+      return parent ? `${parent.name} / ${selectedCategory.name}` : selectedCategory.name;
+    }
+    return selectedCategory.name;
+  }, [categories, selectedCategory, placeholder]);
+
+  // Click outside listener to close dropdown
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  // Reset search term when dropdown collapses
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen]);
+
+  const handleSelect = (id: string) => {
+    onChange(id);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="custom-category-select-container" ref={containerRef}>
+      <button
+        type="button"
+        className={`custom-category-select-trigger ${isOpen ? 'active' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="trigger-label">{displayLabel}</span>
+        <ChevronDown className={`trigger-icon ${isOpen ? 'open' : ''}`} size={16} />
+      </button>
+
+      {isOpen && (
+        <div className="custom-category-select-dropdown">
+          {/* Search Box */}
+          <div className="category-select-search-container">
+            <Search size={14} className="search-icon" />
+            <input
+              type="text"
+              className="category-select-search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="搜索分类..."
+              onClick={(e) => e.stopPropagation()} // Prevent closing/triggering button focus
+              autoFocus
+            />
+          </div>
+
+          {filteredGrouped.length === 0 ? (
+            <div className="no-categories-placeholder">无匹配分类</div>
+          ) : (
+            <div className="dropdown-options-list">
+              {filteredGrouped.map(({ parent, children }) => (
+                <div key={parent.id} className="category-option-group">
+                  {/* Parent Item */}
+                  <div
+                    className={`category-option-item parent-item ${value === parent.id ? 'selected' : ''}`}
+                    onClick={() => handleSelect(parent.id)}
+                  >
+                    <Folder className="item-icon parent-icon" size={14} />
+                    <span className="item-name">{parent.name}</span>
+                    {value === parent.id && <Check className="selected-checkmark" size={14} />}
+                  </div>
+
+                  {/* Child Items */}
+                  {children.map((child) => (
+                    <div
+                      key={child.id}
+                      className={`category-option-item child-item ${value === child.id ? 'selected' : ''}`}
+                      onClick={() => handleSelect(child.id)}
+                    >
+                      <CornerDownRight className="item-icon child-icon" size={12} />
+                      <span className="item-name">{child.name}</span>
+                      {value === child.id && <Check className="selected-checkmark" size={14} />}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
