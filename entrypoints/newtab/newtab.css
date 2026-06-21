@@ -3753,6 +3753,49 @@ select:focus {
   background: rgba(15, 23, 42, 0.25);
 }
 
+/* Scenic Glassmorphism Support for 2FA Locked Page */
+.app-shell.has-scenic-bg .two-factor-unlock-card {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+
+.app-shell.has-scenic-bg .two-factor-unlock-left {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.app-shell.has-scenic-bg .two-factor-unlock-card input {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.app-shell.has-scenic-bg .passphrase-hint-display {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.15);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .two-factor-unlock-card {
+  background: rgba(15, 23, 42, 0.45);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .two-factor-unlock-left {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .two-factor-unlock-card input {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .passphrase-hint-display {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.15);
+}
+
 /* ==========================================================================
    Bookmarks Viewport-Fixed Layout (Desktop Only)
    ========================================================================== */
