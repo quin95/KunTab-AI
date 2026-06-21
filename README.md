@@ -49,9 +49,18 @@
 ### 🔑 2FA Authenticator (Unlocked/Dashboard Screen)
 ![2FA Authenticator Unlocked/Dashboard Screen Preview](assets/screenshots/kuntab-9.png)
 
+### 🌐 Site Navigator
+![Site Navigator Preview](assets/screenshots/kuntab-10.png)
+
 ---
 
 ## 📢 Changelog (版本更新记录)
+
+### v1.7.0 (2026-06-21)
+- 🌐 **新增网址导航功能**：主页新增模块化、高美感的网址导航页面，支持添加、编辑、删除网站及多级分类管理（树状选择器）。
+- 🔍 **导航检索与搜索整合**：首页搜索框完美接入网址导航数据检索，支持快捷过滤和结果来源区分（书签 vs. 导航）。
+- ✈️ **社交入口**：导航页新增 Telegram 频道/群组快捷加入图标。
+- 🎨 **视觉与体验优化**：优化分类下拉选择器的层级显示（去除单调的连字符，采用优雅的缩进与指示器），并精简了空分类的直接删除逻辑。
 
 ### v1.6.0 (2026-06-20)
 - 🎨 **全新 2FA 验证器看板设计**：将原本零散的 2FA 锁、搜索框、同步配置和账号列表统一整合进一个高透磨砂玻璃（Glassmorphism）质感的悬浮大面板中，页面更具整体美感。
@@ -103,6 +112,12 @@ KunTab turns your browser's default New Tab page into an elegant, powerful dashb
 - Rich inline operations: create new folders, edit titles/URLs/parent folders, delete bookmarks, and mark bookmarks as "Frequently Used" links on the main grid dashboard.
 - Custom dragging/sorting for frequently used bookmarks.
 - Quick history list showing recently visited links using local caching.
+
+### 🌐 Site Navigator
+- **Categorized Dashboard**: Organize your favorite sites into multi-level categories for quick access.
+- **Unified Search Integration**: Search both bookmarks and navigator sites directly from the home search bar.
+- **Quick Customization**: Add, edit, or delete categories and websites with visual confirmation and clean dialogs.
+- **Social Connect**: Quick access icon to join the Telegram group/channel directly from the navigator page.
 
 ### 💾 Safe Backup & Restoration
 - **JSON Backup**: Export all custom bookmarks, folder hierarchies, dashboard settings, and quick links into a single secure file.
