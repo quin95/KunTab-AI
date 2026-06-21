@@ -1121,7 +1121,8 @@ select:focus {
   color: var(--text);
 }
 
-.site-card-open img {
+.site-card-open img,
+.site-card-open .site-card-fallback-icon {
   width: 2.15rem;
   height: 2.15rem;
   border-radius: 9px;
@@ -1132,7 +1133,12 @@ select:focus {
   transition: transform 0.25s ease;
 }
 
-.site-card:hover .site-card-open img {
+.site-card-open .site-card-fallback-icon {
+  color: var(--muted);
+}
+
+.site-card:hover .site-card-open img,
+.site-card:hover .site-card-open .site-card-fallback-icon {
   transform: scale(1.05);
 }
 
@@ -1455,8 +1461,121 @@ select:focus {
   background: var(--danger-soft);
 }
 
+.site-delete-category-modal .modal-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.site-delete-category-modal .modal-close-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.site-delete-category-modal .modal-close-btn:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.site-delete-category-modal .modal-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
 .site-delete-category-modal select {
   width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.site-delete-category-modal select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.site-delete-category-modal .modal-actions button {
+  white-space: nowrap;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.88rem;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.site-delete-category-modal .modal-actions .btn-cancel {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.site-delete-category-modal .modal-actions .btn-cancel:hover {
+  background: var(--bg);
+}
+
+.site-delete-category-modal .modal-actions .btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+  border: 1px solid var(--primary);
+}
+
+.site-delete-category-modal .modal-actions .btn-primary:hover {
+  background: color-mix(in srgb, var(--primary) 85%, #000);
+}
+
+.site-delete-category-modal .modal-actions .btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid var(--danger-soft);
+}
+
+.site-delete-category-modal .modal-actions .btn-danger:hover {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .site-delete-category-modal .modal-actions.multi-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+  .site-delete-category-modal .modal-actions.multi-actions button {
+    width: 100%;
+  }
+}
+
+.site-card-letter-avatar {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease;
+  user-select: none;
+}
+
+.site-card:hover .site-card-letter-avatar {
+  transform: scale(1.05);
 }
 
 @media (min-width: 1025px) {
@@ -3007,7 +3126,7 @@ select:focus {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  z-index: 1000;
+  z-index: 1200;
   animation: fadeInModal 0.25s ease;
 }
 
@@ -5268,6 +5387,212 @@ select:focus {
   font-weight: 600;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* Site navigation AI planning card */
+.site-navigation-plan-card .card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.site-plan-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.site-plan-chip {
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.site-plan-chip.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.site-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+}
+
+.site-plan-group {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.app-shell.has-scenic-bg .site-plan-group {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+:root[data-theme='dark'] .app-shell.has-scenic-bg .site-plan-group {
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.site-plan-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 0.8rem;
+  font-weight: 750;
+}
+
+.site-plan-group-title svg {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.site-plan-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.site-plan-row {
+  display: grid;
+  grid-template-columns: auto 28px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.72rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.2s ease;
+}
+
+.site-plan-row:last-child {
+  border-bottom: 0;
+}
+
+.site-plan-row:hover {
+  background: var(--bg);
+}
+
+.site-plan-row.selected {
+  background: color-mix(in srgb, var(--primary-soft) 58%, transparent);
+}
+
+.site-plan-row.duplicate {
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.site-plan-row input {
+  margin-top: 0.25rem;
+}
+
+.site-plan-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.site-plan-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.site-plan-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.site-plan-title-row strong {
+  max-width: min(360px, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+}
+
+.site-plan-main small {
+  color: var(--muted);
+  font-size: 0.73rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-plan-main p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.site-plan-badge {
+  padding: 0.08rem 0.38rem;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.68rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.site-plan-badge.create {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.site-plan-badge.duplicate {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.site-plan-footer {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.site-plan-footer > span {
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.site-plan-footer .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+@media (max-width: 768px) {
+  .site-plan-row {
+    grid-template-columns: auto 24px minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.65rem;
+  }
+
+  .site-plan-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .site-plan-footer > span {
+    margin-right: 0;
+  }
 }
 
 /* Summary stats card */

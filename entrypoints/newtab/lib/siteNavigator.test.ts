@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { SiteNavigationData } from '../models';
 import {
+  directSiteFaviconOf,
   fallbackSiteTitle,
   filterSiteNavItems,
+  getSiteIconCandidates,
   normalizeSiteUrl,
   resolveSiteIconUrl,
   sanitizeSiteNavigationData,
@@ -54,6 +56,18 @@ describe('site navigator fallbacks', () => {
       'https://cdn.example/icon.png',
     );
     expect(resolveSiteIconUrl({ url: 'https://example.com', iconUrl: '' })).toContain('example.com');
+  });
+
+  it('keeps local favicon before online fallbacks for site navigation icons', () => {
+    const candidates = getSiteIconCandidates({ url: 'https://example.com/app', iconUrl: '' });
+
+    expect(candidates[0]).toContain('example.com');
+    expect(candidates[1]).toBe('https://example.com/favicon.ico');
+    expect(candidates[2]).toContain('icons.duckduckgo.com');
+  });
+
+  it('builds a direct origin favicon candidate', () => {
+    expect(directSiteFaviconOf('example.com/path')).toBe('https://example.com/favicon.ico');
   });
 
   it('drops third-level categories and items pointing to invalid categories', () => {

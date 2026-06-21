@@ -24,8 +24,63 @@ export function fallbackSiteTitle(url: string): string {
   return host || url;
 }
 
+export function onlineSiteFaviconOf(url: string): string {
+  try {
+    const hostname = new URL(normalizeSiteUrl(url)).hostname;
+    return `https://api.iowen.cn/favicon/${hostname}.png`;
+  } catch {
+    return '';
+  }
+}
+
+export function duckDuckGoFaviconOf(url: string): string {
+  try {
+    const hostname = new URL(normalizeSiteUrl(url)).hostname;
+    return `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
+  } catch {
+    return '';
+  }
+}
+
+export function directSiteFaviconOf(url: string): string {
+  try {
+    const parsed = new URL(normalizeSiteUrl(url));
+    return `${parsed.protocol}//${parsed.hostname}/favicon.ico`;
+  } catch {
+    return '';
+  }
+}
+
+export function googleSiteFaviconOf(url: string, size = 64): string {
+  try {
+    const hostname = new URL(normalizeSiteUrl(url)).hostname;
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=${size}`;
+  } catch {
+    return '';
+  }
+}
+
+export function getSiteIconCandidates(item: Pick<SiteNavItem, 'url' | 'iconUrl'>, size = 64): string[] {
+  const candidates: string[] = [];
+
+  // 1. Custom icon URL
+  if (item.iconUrl?.trim()) {
+    candidates.push(item.iconUrl.trim());
+  }
+
+  // 2. Google Favicon Service (s2 API)
+  const google = googleSiteFaviconOf(item.url, size);
+  if (google) candidates.push(google);
+
+  // 3. Direct Favicon from domain root
+  const direct = directSiteFaviconOf(item.url);
+  if (direct) candidates.push(direct);
+
+  return candidates.filter((url, index, list) => url && list.indexOf(url) === index);
+}
+
 export function resolveSiteIconUrl(item: Pick<SiteNavItem, 'url' | 'iconUrl'>, size = 64): string {
-  return item.iconUrl?.trim() || faviconOf(item.url, size);
+  return getSiteIconCandidates(item, size)[0] || '';
 }
 
 export function sanitizeSiteNavigationData(value: Partial<SiteNavigationData> | null | undefined): SiteNavigationData {

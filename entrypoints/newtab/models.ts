@@ -148,6 +148,16 @@ export interface SiteNavigationData {
   updatedAt: number;
 }
 
+export type AgentCapability = 'bookmark' | 'siteNavigation' | 'generalChat';
+
+export interface AgentAction {
+  capability: AgentCapability;
+  action: string;
+  summary: string;
+  requiresConfirmation: boolean;
+  payload: any;
+}
+
 export interface RecentOpenItem {
   id: string;
   title: string;
@@ -203,6 +213,6 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
-  cardType?: 'moves' | 'duplicates' | 'recommendations' | 'summary' | 'emptyFolders';
+  cardType?: 'moves' | 'duplicates' | 'recommendations' | 'summary' | 'emptyFolders' | 'agentAction';
   cardData?: any;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type SyntheticEvent } from 'react';
 import {
   ArrowDown,
   ArrowUp,
@@ -23,6 +23,7 @@ import {
   filterSiteNavItems,
   getCategoryScopeIds,
   getChildCategories,
+  getSiteIconCandidates,
   getTopLevelCategories,
   moveSiteNavCategory,
   moveSiteNavItem,
@@ -31,7 +32,7 @@ import {
   updateSiteNavCategory,
   upsertSiteNavItem,
 } from './lib/siteNavigator';
-import { hostnameOf } from './lib/utils';
+import { faviconOf, hostnameOf } from './lib/utils';
 
 type DraftSite = {
   id?: string;
@@ -93,8 +94,10 @@ const SITE_NAV_TEXT = {
     confirmDeleteSite: '确认删除「{title}」吗？',
     deleteCategoryTitle: '删除分类',
     deleteCategoryDesc: '分类「{name}」包含 {count} 个网站。请选择如何处理这些网站。',
+    deleteCategoryEmptyDesc: '确定要删除分类「{name}」吗？',
     deleteItems: '同时删除网站',
     moveItems: '移动到其他分类',
+    confirmDelete: '确认删除',
     emptyTitleOrUrl: '名称和 URL 不能为空',
     createCategoryFirst: '请先创建分类',
     titleFetching: '正在自动获取网站标题...',
@@ -137,8 +140,10 @@ const SITE_NAV_TEXT = {
     confirmDeleteSite: 'Delete "{title}"?',
     deleteCategoryTitle: 'Delete Category',
     deleteCategoryDesc: '"{name}" contains {count} sites. Choose how to handle them.',
+    deleteCategoryEmptyDesc: 'Are you sure you want to delete category "{name}"?',
     deleteItems: 'Delete sites too',
     moveItems: 'Move to another category',
+    confirmDelete: 'Delete',
     emptyTitleOrUrl: 'Name and URL cannot be empty',
     createCategoryFirst: 'Create a category first',
     titleFetching: 'Fetching site title...',
@@ -397,7 +402,7 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
             onDragEnd={() => setDragSiteId(null)}
           >
             <button className="site-card-open" onClick={() => window.open(item.url, '_blank', 'noopener,noreferrer')}>
-              <img src={resolveSiteIconUrl(item, 64)} alt="" />
+              <SiteNavIcon item={item} size={64} />
               <strong title={item.title}>{item.title}</strong>
             </button>
             <div className="site-card-tools">
@@ -488,7 +493,7 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
                 <span>{text.preview}</span>
                 <div className="site-card preview">
                   <button className="site-card-open" type="button">
-                    <img src={resolveSiteIconUrl(previewItem, 64)} alt="" />
+                    <SiteNavIcon item={previewItem} size={64} />
                     <strong>{previewItem.title}</strong>
                   </button>
                 </div>
@@ -547,48 +552,233 @@ export function SiteNavigatorPage({ data, language, onChange, onToast }: SiteNav
       )}
 
       {deleteCategoryState && (
-        <div className="modal-mask">
-          <div className="modal-card site-delete-category-modal">
+        <div className="modal-mask" onClick={() => setDeleteCategoryState(null)}>
+          <div className="modal-card site-delete-category-modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
               <h3>{text.deleteCategoryTitle}</h3>
-            </div>
-            <div className="modal-body">
-              <p>
-                {fmt(text.deleteCategoryDesc, {
-                  name: deleteCategoryState.category.name,
-                  count: deleteCategoryState.affectedItemCount,
-                })}
-              </p>
-              <select
-                value={deleteCategoryState.moveTargetId}
-                onChange={(event) =>
-                  setDeleteCategoryState((prev) => (prev ? { ...prev, moveTargetId: event.target.value } : prev))
-                }
-              >
-                {data.categories
-                  .filter((category) => !getCategoryScopeIds(data, deleteCategoryState.category.id).includes(category.id))
-                  .map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.parentId ? `  - ${category.name}` : category.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button onClick={() => setDeleteCategoryState(null)}>{text.cancel}</button>
-              <button
-                disabled={!deleteCategoryState.moveTargetId}
-                onClick={() => confirmDeleteCategory('move-items')}
-              >
-                {text.moveItems}
-              </button>
-              <button className="danger-btn" onClick={() => confirmDeleteCategory('delete-items')}>
-                {text.deleteItems}
+              <button className="modal-close-btn" onClick={() => setDeleteCategoryState(null)} aria-label="Close">
+                <X size={18} />
               </button>
             </div>
+            {deleteCategoryState.affectedItemCount > 0 ? (
+              <>
+                <div className="modal-body">
+                  <p>
+                    {fmt(text.deleteCategoryDesc, {
+                      name: deleteCategoryState.category.name,
+                      count: deleteCategoryState.affectedItemCount,
+                    })}
+                  </p>
+                  <div className="modal-select-wrapper">
+                    <select
+                      value={deleteCategoryState.moveTargetId}
+                      onChange={(event) =>
+                        setDeleteCategoryState((prev) => (prev ? { ...prev, moveTargetId: event.target.value } : prev))
+                      }
+                    >
+                      {data.categories
+                        .filter((category) => !getCategoryScopeIds(data, deleteCategoryState.category.id).includes(category.id))
+                        .map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.parentId ? `  - ${category.name}` : category.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="modal-actions multi-actions">
+                  <button className="btn-cancel" onClick={() => setDeleteCategoryState(null)}>{text.cancel}</button>
+                  <button
+                    className="btn-primary"
+                    disabled={!deleteCategoryState.moveTargetId}
+                    onClick={() => confirmDeleteCategory('move-items')}
+                  >
+                    {text.moveItems}
+                  </button>
+                  <button className="btn-danger" onClick={() => confirmDeleteCategory('delete-items')}>
+                    {text.deleteItems}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="modal-body">
+                  <p>
+                    {fmt(text.deleteCategoryEmptyDesc, {
+                      name: deleteCategoryState.category.name,
+                    })}
+                  </p>
+                </div>
+                <div className="modal-actions">
+                  <button className="btn-cancel" onClick={() => setDeleteCategoryState(null)}>{text.cancel}</button>
+                  <button className="btn-danger" onClick={() => confirmDeleteCategory('delete-items')}>
+                    {text.confirmDelete}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
     </section>
+  );
+}
+
+function SiteNavLetterAvatar({ title, url }: { title: string; url: string }) {
+  const char = useMemo(() => {
+    const trimmed = title.trim();
+    if (!trimmed) return '?';
+    return trimmed.charAt(0).toUpperCase();
+  }, [title]);
+
+  const background = useMemo(() => {
+    const str = `${title}||${url}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+      'linear-gradient(135deg, #FF6B6B, #FF8E53)',
+      'linear-gradient(135deg, #4E65FF, #92EFFD)',
+      'linear-gradient(135deg, #11998e, #38ef7d)',
+      'linear-gradient(135deg, #7F00FF, #E100FF)',
+      'linear-gradient(135deg, #F857A6, #FF5858)',
+      'linear-gradient(135deg, #00C6FF, #0072FF)',
+      'linear-gradient(135deg, #F7971E, #FFD200)',
+      'linear-gradient(135deg, #614385, #516395)',
+    ];
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  }, [title, url]);
+
+  return (
+    <div className="site-card-letter-avatar" style={{ background }}>
+      <span>{char}</span>
+    </div>
+  );
+}
+
+// Global memory cache to store resolved icon status and prevent repeated fetches/flickers
+const resolvedIconsCache = new Map<string, { src: string; isFallback: boolean }>();
+
+// Reference size for Google default fallback icon
+let googleDefaultSize = -1;
+let defaultsPromise: Promise<void> | null = null;
+
+const ensureDefaultSizes = (): Promise<void> => {
+  if (defaultsPromise) return defaultsPromise;
+  
+  defaultsPromise = (async () => {
+    try {
+      const gRes = await fetch('https://www.google.com/s2/favicons?domain=kuntab-missing-favicon.invalid&sz=64');
+      if (gRes.ok) {
+        const gBlob = await gRes.blob();
+        googleDefaultSize = gBlob.size;
+      }
+    } catch (e) {
+      console.warn('Failed to resolve Google default favicon size', e);
+    }
+  })();
+  
+  return defaultsPromise;
+};
+
+function SiteNavIcon({
+  item,
+  size = 64,
+}: {
+  item: Pick<SiteNavItem, 'url' | 'iconUrl' | 'title'>;
+  size?: number;
+}) {
+  const cacheKey = useMemo(() => `${item.url}||${item.iconUrl || ''}`, [item.url, item.iconUrl]);
+  const [state, setState] = useState<{ src: string; isFallback: boolean }>(() => {
+    const cached = resolvedIconsCache.get(cacheKey);
+    // While resolving, we show fallback avatar as a clean placeholder
+    return cached || { src: '', isFallback: true };
+  });
+
+  useEffect(() => {
+    const cached = resolvedIconsCache.get(cacheKey);
+    if (cached) {
+      setState(cached);
+      return;
+    }
+
+    let active = true;
+    const resolveIcon = async () => {
+      await ensureDefaultSizes();
+      const candidates = getSiteIconCandidates(item, size);
+      
+      for (const candidate of candidates) {
+        if (!active) return;
+
+        // If the candidate is custom local base64/blob or chrome data, skip fetching and use directly
+        if (candidate.startsWith('data:') || candidate.startsWith('blob:')) {
+          const result = { src: candidate, isFallback: false };
+          resolvedIconsCache.set(cacheKey, result);
+          if (active) setState(result);
+          return;
+        }
+
+        try {
+          const res = await fetch(candidate, { method: 'GET' });
+          if (!active) return;
+          if (!res.ok) continue;
+
+          // Verify the resource is an actual image (not an HTML redirect or error page)
+          const contentType = res.headers.get('content-type') || '';
+          if (!contentType.toLowerCase().startsWith('image/')) {
+            continue;
+          }
+
+          const blob = await res.blob();
+          if (!active) return;
+
+          // Skip if matches Google default size
+          if (googleDefaultSize !== -1 && blob.size === googleDefaultSize) {
+            continue;
+          }
+          // Skip if the image is extremely tiny/empty (less than 100 bytes)
+          if (blob.size < 100) {
+            continue;
+          }
+
+          // Icon is valid! Use it
+          const result = { src: candidate, isFallback: false };
+          resolvedIconsCache.set(cacheKey, result);
+          if (active) setState(result);
+          return;
+        } catch (err) {
+          // Fetch failed (network or CORS), try next candidate
+        }
+      }
+
+      // If all candidates failed or returned default icons, use initials avatar fallback
+      const fallbackResult = { src: '', isFallback: true };
+      resolvedIconsCache.set(cacheKey, fallbackResult);
+      if (active) setState(fallbackResult);
+    };
+
+    resolveIcon();
+
+    return () => {
+      active = false;
+    };
+  }, [cacheKey, item, size]);
+
+  if (state.isFallback || !state.src) {
+    return <SiteNavLetterAvatar title={item.title} url={item.url} />;
+  }
+
+  return (
+    <img
+      src={state.src}
+      alt=""
+      onError={() => {
+        // If loading somehow failed on img, fall back immediately to letter avatar
+        setState({ src: '', isFallback: true });
+        resolvedIconsCache.set(cacheKey, { src: '', isFallback: true });
+      }}
+    />
   );
 }

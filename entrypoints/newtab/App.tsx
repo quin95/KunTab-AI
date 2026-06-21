@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type {
+  AgentAction,
   AppSettings,
   BackupData,
   FlatBookmark,
@@ -69,6 +70,7 @@ import {
 import { buildS3ConnectionTestKey, buildS3ObjectKey, getS3Json, putS3Json } from './lib/s3Client';
 import { getEngineById, parseSearchCommand, SEARCH_ENGINES } from './lib/search';
 import { faviconOf, formatDateTime, formatRelativeTime, greetingByTime, hostnameOf } from './lib/utils';
+import { serializeAgentCapabilityRegistry } from './lib/agentCapabilities';
 import {
   Bell,
   Bookmark,
@@ -120,6 +122,12 @@ import {
 } from 'lucide-react';
 import { testAi, chat } from './lib/ai';
 import { buildCompareTrees, executeCategorization, serializeBookmarkContext, type DiffTreeNode } from './lib/aiBookmark';
+import {
+  applySiteNavigationPlan,
+  buildSiteNavigationPlanPreview,
+  serializeSiteNavigationContext,
+  type SiteNavigationPlanPreview,
+} from './lib/aiSiteNavigation';
 import { DEFAULT_SITE_NAVIGATION } from './lib/siteNavigator';
 import { TwoFactorPage } from './TwoFactorPage';
 import { SiteNavigatorPage } from './SiteNavigatorPage';
@@ -562,6 +570,7 @@ export default function App() {
   const [cardErrorMessage, setCardErrorMessage] = useState<Record<string, string>>({});
   const [cardSuccessMessage, setCardSuccessMessage] = useState<Record<string, string>>({});
   const [duplicateSelections, setDuplicateSelections] = useState<Record<string, string[]>>({});
+  const [siteNavigationPlanSelections, setSiteNavigationPlanSelections] = useState<Record<string, string[]>>({});
   const [compareTreeExpanded, setCompareTreeExpanded] = useState<Record<string, boolean>>({});
   const [scanningEmptyFolders, setScanningEmptyFolders] = useState(false);
   const [showAiApiKey, setShowAiApiKey] = useState(false);
@@ -1553,6 +1562,70 @@ export default function App() {
     setTestingConnection(false);
   };
 
+  const buildAgentActionCardData = (raw: any): AgentAction | null => {
+    if (!raw || typeof raw !== 'object') return null;
+    const capability = raw.capability;
+    const action = String(raw.action || '').trim();
+    if (!['bookmark', 'siteNavigation', 'generalChat'].includes(capability) || !action) return null;
+
+    const agentAction: AgentAction = {
+      capability,
+      action,
+      summary: String(raw.summary || '').trim(),
+      requiresConfirmation: raw.requiresConfirmation !== false,
+      payload: raw.payload ?? {},
+    };
+
+    if (agentAction.capability === 'siteNavigation' && agentAction.action === 'planAddSites') {
+      const preview = buildSiteNavigationPlanPreview(agentAction.payload, siteNavigation);
+      return {
+        ...agentAction,
+        payload: {
+          ...agentAction.payload,
+          preview,
+        },
+      };
+    }
+
+    return agentAction;
+  };
+
+  const parseChatCardBlock = (text: string, enrichDuplicates: (data: any) => any) => {
+    const blockRegex = /```(json-agent-action|json-bookmark-(?:moves|duplicates|recommendations|summary))\n([\s\S]*?)\n```/;
+    const match = blockRegex.exec(text);
+    if (!match) {
+      return { cleanText: text, cardType: undefined as ChatMessage['cardType'], cardData: null as any };
+    }
+
+    const language = match[1];
+    const jsonStr = match[2].trim();
+    let cardType: ChatMessage['cardType'];
+    let cardData: any = null;
+
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (language === 'json-agent-action') {
+        cardData = buildAgentActionCardData(parsed);
+        if (!cardData) {
+          throw new Error('Unsupported agent action');
+        }
+        cardType = 'agentAction';
+      } else {
+        const type = language.replace('json-bookmark-', '') as Exclude<ChatMessage['cardType'], 'emptyFolders' | 'agentAction'>;
+        cardData = type === 'duplicates' ? enrichDuplicates(parsed) : parsed;
+        cardType = type;
+      }
+      return { cleanText: text.replace(match[0], '').trim(), cardType, cardData };
+    } catch (e) {
+      console.error('Failed to parse chat card JSON:', jsonStr, e);
+      return {
+        cleanText: text + '\n\n*(提示：助手生成了数据卡片，但 JSON 数据格式损坏或能力不受支持，无法显示交互式卡片。)*',
+        cardType: undefined as ChatMessage['cardType'],
+        cardData: null as any,
+      };
+    }
+  };
+
   const onSendChatMessage = async (customText?: string) => {
     const enrichDuplicates = (data: any) => {
       if (data && data.duplicates) {
@@ -1615,19 +1688,60 @@ export default function App() {
 
     try {
       const scopeBookmarks = allBookmarks;
-      const serializedContext = serializeBookmarkContext(scopeBookmarks, folderOptions);
+      const serializedBookmarkContext = serializeBookmarkContext(scopeBookmarks, folderOptions);
+      const serializedSiteNavigationContext = serializeSiteNavigationContext(siteNavigation);
+      const serializedCapabilities = serializeAgentCapabilityRegistry();
 
-      const systemPrompt = `你是一个集成了强大浏览器书签控制能力的 AI 智能助手，名叫 "KunTab AI 智能助手"。
-你能够通过分析用户的全部书签/选定文件夹书签，帮助用户整理目录、清理重复、发现兴趣并推荐网站。
+      const systemPrompt = `你是 KunTab 内置的通用 AI 智能体，名叫 "KunTab AI 智能助手"。
+你不是单纯的书签助手。你需要先理解用户意图，再选择：普通对话回答、生成建议卡片、调用 KunTab 能力，或说明当前能力暂不支持。
+
+【能力边界】：
+${serializedCapabilities}
+
+不要因为上下文里有书签数据，就把所有问题强行解释成书签任务。
+所有会修改本地数据的动作，都必须先输出预览卡片，让用户确认后由系统执行。你不能声称已经直接修改完成。
 
 【当前用户的书签上下文】：
-${serializedContext}
+${serializedBookmarkContext}
+
+${serializedSiteNavigationContext}
 
 【核心运行机制】：
-当用户向你发送指令时，你不仅需要以亲切、口语化的中文进行解释，还需要在回答的最末尾，根据用户的命令意图，附带一个特定格式的 JSON 代码块，以便系统为其渲染交互式功能卡片。
+当用户向你发送指令时，你需要以亲切、口语化的中文进行解释。若该指令需要 KunTab 生成交互式预览卡片，请在回答最末尾附带一个特定格式的 JSON 代码块。
+普通问答不要附带任何 JSON 代码块。
 
-【卡片代码块输出规范】：
-请根据用户请求的类型，在回答末尾输出且仅输出以下其中一种代码块格式（三反引号包裹）：
+【统一智能体能力代码块】：
+当用户要操作“网址导航”时，必须输出 \`json-agent-action\` 代码块：
+\`\`\`json-agent-action
+{
+  "capability": "siteNavigation",
+  "action": "planAddSites",
+  "summary": "规划若干网站到网址导航",
+  "requiresConfirmation": true,
+  "payload": {
+    "sites": [
+      {
+        "title": "网站标题",
+        "url": "https://example.com",
+        "desc": "这个网站能做什么",
+        "topCategory": "一级分类",
+        "childCategory": "二级分类，可为空字符串",
+        "reason": "为什么推荐放在这个分类"
+      }
+    ]
+  }
+}
+\`\`\`
+
+网址导航规划要求：
+- 分类最多两层：一级分类 + 可选二级分类，禁止输出三级分类。
+- 优先复用现有分类；只有没有合适分类时才建议新分类。
+- 用户要求推荐网站时，可以基于你的模型知识推荐；当前系统没有实时联网搜索能力，不要声称你刚刚搜索了互联网。
+- 用户粘贴一批网站时，尽量保留用户提供的标题和 URL，再补充分类与说明。
+- 只规划网站，不写入 Chrome 书签。
+
+【旧版书签卡片代码块兼容规范】：
+当且仅当用户明确要求操作 Chrome 书签时，根据请求类型，在回答末尾输出且仅输出以下其中一种代码块格式（三反引号包裹）：
 
 1. 整理书签时 (用户要你分类、整理、归档书签，如点击了“按主题帮我整理书签”或发送类似命令)：
 必须输出 \`json-bookmark-moves\` 代码块，只包含需要发生路径改变的书签：
@@ -1679,6 +1793,7 @@ ${serializedContext}
 【注意事项】：
 - 所有的 JSON 代码块都必须使用标准的 Markdown 语法（三反引号加对应的语言标识）。
 - 绝不要把现有无需移动的书签也写在 \`moves\` 列表中，只写发生变化的书签。
+- 任何时候最多输出一个 JSON 代码块。
 - JSON 数据必须保证能被 JavaScript 的 JSON.parse 成功解析。请确保输出内容不要有多余字符，避免 JSON 解析失败。`;
 
       const historyList = updatedMessages.map((m) => ({
@@ -1699,30 +1814,21 @@ ${serializedContext}
             let cardData: any = null;
             let cleanText = text;
 
-            const blockStartIdx = text.indexOf('```json-bookmark-');
+            const agentBlockStartIdx = text.indexOf('```json-agent-action');
+            const bookmarkBlockStartIdx = text.indexOf('```json-bookmark-');
+            const blockStartIdx = [agentBlockStartIdx, bookmarkBlockStartIdx]
+              .filter((index) => index !== -1)
+              .sort((a, b) => a - b)[0] ?? -1;
             if (blockStartIdx !== -1) {
               cleanText = text.substring(0, blockStartIdx).trim();
               const notice = '\n\n*(正在分析数据并生成交互卡片，请稍候...)*';
               cleanText = cleanText ? cleanText + notice : '*(正在分析数据并生成交互卡片，请稍候...)*';
               
-              // Check if completed inside text chunk
-              const blockRegex = /```json-bookmark-(moves|duplicates|recommendations|summary)\n([\s\S]*?)\n```/g;
-              const match = blockRegex.exec(text);
-              if (match) {
-                const type = match[1];
-                const jsonStr = match[2].trim();
-                try {
-                  cardData = JSON.parse(jsonStr);
-                  if (type === 'duplicates') {
-                    cardData = enrichDuplicates(cardData);
-                  }
-                  cardType = type as ChatMessage['cardType'];
-                  // If complete, strip the notice and the code block
-                  const cleanBase = text.replace(match[0], '').trim();
-                  cleanText = cleanBase;
-                } catch (e) {
-                  // Incomplete or invalid JSON, keep notice
-                }
+              const parsed = parseChatCardBlock(text, enrichDuplicates);
+              if (parsed.cardType) {
+                cardType = parsed.cardType;
+                cardData = parsed.cardData;
+                cleanText = parsed.cleanText;
               }
             }
 
@@ -1746,25 +1852,10 @@ ${serializedContext}
       let cardData: any = null;
       let cleanText = responseText;
 
-      const blockRegex = /```json-bookmark-(moves|duplicates|recommendations|summary)\n([\s\S]*?)\n```/g;
-      const match = blockRegex.exec(responseText);
-
-      if (match) {
-        const type = match[1];
-        const jsonStr = match[2].trim();
-        
-        try {
-          cardData = JSON.parse(jsonStr);
-          if (type === 'duplicates') {
-            cardData = enrichDuplicates(cardData);
-          }
-          cardType = type as ChatMessage['cardType'];
-          cleanText = responseText.replace(match[0], '').trim();
-        } catch (e) {
-          console.error('Failed to parse chat card JSON:', jsonStr, e);
-          cleanText = responseText + '\n\n*(提示：助手生成了数据卡片，但 JSON 数据格式损坏，无法显示交互式卡片。)*';
-        }
-      }
+      const parsedCard = parseChatCardBlock(responseText, enrichDuplicates);
+      cleanText = parsedCard.cleanText;
+      cardType = parsedCard.cardType;
+      cardData = parsedCard.cardData;
 
       setChatMessages((prev) =>
         prev.map((msg) =>
@@ -1788,6 +1879,18 @@ ${serializedContext}
           }
         });
         setDuplicateSelections((prev) => ({ ...prev, [assistantMsgId]: idsToSelect }));
+      }
+
+      if (
+        cardType === 'agentAction' &&
+        cardData?.capability === 'siteNavigation' &&
+        cardData?.action === 'planAddSites'
+      ) {
+        const preview = cardData.payload?.preview as SiteNavigationPlanPreview | undefined;
+        setSiteNavigationPlanSelections((prev) => ({
+          ...prev,
+          [assistantMsgId]: preview?.selectedIds || [],
+        }));
       }
     } catch (err: any) {
       if (err.name === 'AbortError') {
@@ -1842,6 +1945,39 @@ ${serializedContext}
         setCardSuccessMessage((prev) => ({ ...prev, [messageId]: `成功清理了 ${selectedIds.length} 个重复书签！` }));
         showToast('重复书签清理完毕！');
       }
+    } catch (err: any) {
+      setCardErrorMessage((prev) => ({ ...prev, [messageId]: err?.message || String(err) }));
+    } finally {
+      setExecutingCardId(null);
+    }
+  };
+
+  const onExecuteAgentAction = async (agentAction: AgentAction, messageId: string) => {
+    setExecutingCardId(messageId);
+    setCardErrorMessage((prev) => ({ ...prev, [messageId]: '' }));
+    setCardSuccessMessage((prev) => ({ ...prev, [messageId]: '' }));
+
+    try {
+      if (agentAction.capability === 'siteNavigation' && agentAction.action === 'planAddSites') {
+        const preview = agentAction.payload?.preview as SiteNavigationPlanPreview | undefined;
+        if (!preview) {
+          throw new Error('网址导航方案数据结构有误，无法执行。');
+        }
+        const selectedIds = siteNavigationPlanSelections[messageId] || [];
+        if (selectedIds.length === 0) {
+          throw new Error('请先勾选需要保存到网址导航的网站。');
+        }
+        const result = applySiteNavigationPlan(siteNavigation, preview, selectedIds);
+        await syncSiteNavigation(result.data);
+        setCardSuccessMessage((prev) => ({
+          ...prev,
+          [messageId]: `已保存 ${result.added} 个网站到网址导航${result.skipped ? `，跳过 ${result.skipped} 个重复网站` : ''}。`,
+        }));
+        showToast(`已保存 ${result.added} 个网站到网址导航`);
+        return;
+      }
+
+      throw new Error('当前版本暂不支持执行这个智能体动作。');
     } catch (err: any) {
       setCardErrorMessage((prev) => ({ ...prev, [messageId]: err?.message || String(err) }));
     } finally {
@@ -2567,7 +2703,7 @@ ${serializedContext}
                               <div></div>
                             </div>
                             <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 500 }}>
-                              AI 正在思考并整理书签，请稍候...
+                              AI 正在思考并生成回复，请稍候...
                             </span>
                           </div>
                         )
@@ -2613,6 +2749,19 @@ ${serializedContext}
                         />
                       )}
 
+                      {msg.cardType === 'agentAction' && (
+                        <AgentActionCard
+                          agentAction={msg.cardData}
+                          messageId={msg.id}
+                          executingCardId={executingCardId}
+                          cardSuccessMessage={cardSuccessMessage}
+                          cardErrorMessage={cardErrorMessage}
+                          siteNavigationPlanSelections={siteNavigationPlanSelections}
+                          setSiteNavigationPlanSelections={setSiteNavigationPlanSelections}
+                          onExecuteAgentAction={onExecuteAgentAction}
+                        />
+                      )}
+
                       {msg.cardType === 'emptyFolders' && (
                         <EmptyFolderCleanCard
                           cardData={msg.cardData}
@@ -2634,7 +2783,7 @@ ${serializedContext}
                     <Sparkles size={24} />
                   </div>
                   <h2>KunTab AI 智能助手</h2>
-                  <p>我是你的浏览器书签管家，我可以帮你自动分类、去重清理、推荐新内容或总结你的收藏偏好。</p>
+                  <p>我是你的 KunTab 通用智能体。你可以问我普通问题，也可以让我规划书签、网址导航和其他 KunTab 工作流。</p>
                   
                   <div className="chat-suggest-title">你可以这样问我</div>
                   <div className="chat-suggest-group">
@@ -2654,10 +2803,17 @@ ${serializedContext}
                     </button>
                     <button
                       className="chat-suggest-btn"
-                      onClick={() => onSendChatMessage('根据我的书签推荐相关网站')}
+                      onClick={() => onSendChatMessage('帮我推荐一些 IP 质量检测网站，并规划保存到网址导航')}
                     >
-                      <Globe size={16} style={{ color: '#10b981' }} />
-                      <span>根据我的书签推荐相关网站</span>
+                      <Compass size={16} style={{ color: '#10b981' }} />
+                      <span>推荐网站到网址导航</span>
+                    </button>
+                    <button
+                      className="chat-suggest-btn"
+                      onClick={() => onSendChatMessage('我会粘贴一批网站，请帮我按一级分类和二级分类规划到网址导航，优先复用现有分类。')}
+                    >
+                      <Globe size={16} style={{ color: '#0ea5e9' }} />
+                      <span>整理一批网站</span>
                     </button>
                     <button
                       className="chat-suggest-btn"
@@ -4430,6 +4586,237 @@ function DuplicateCleanCard({
           >
             {isExecuting ? <Loader2 className="animate-spin" size={14} /> : <Trash2 size={14} />}
             {isExecuting ? '正在清理...' : '一键清理选中的重复项'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentActionCard({
+  agentAction,
+  messageId,
+  executingCardId,
+  cardSuccessMessage,
+  cardErrorMessage,
+  siteNavigationPlanSelections,
+  setSiteNavigationPlanSelections,
+  onExecuteAgentAction,
+}: {
+  agentAction: AgentAction | null;
+  messageId: string;
+  executingCardId: string | null;
+  cardSuccessMessage: Record<string, string>;
+  cardErrorMessage: Record<string, string>;
+  siteNavigationPlanSelections: Record<string, string[]>;
+  setSiteNavigationPlanSelections: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+  onExecuteAgentAction: (agentAction: AgentAction, messageId: string) => Promise<void>;
+}) {
+  if (!agentAction) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>智能体动作</span>
+        </div>
+        <div className="card-body">
+          <div className="ai-error-box" style={{ margin: 0 }}>
+            <XCircle size={16} />
+            <span>智能体动作数据结构有误，无法生成预览。</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (agentAction.capability === 'siteNavigation' && agentAction.action === 'planAddSites') {
+    return (
+      <SiteNavigationPlanCard
+        agentAction={agentAction}
+        messageId={messageId}
+        executingCardId={executingCardId}
+        cardSuccessMessage={cardSuccessMessage}
+        cardErrorMessage={cardErrorMessage}
+        selections={siteNavigationPlanSelections}
+        setSelections={setSiteNavigationPlanSelections}
+        onExecuteAgentAction={onExecuteAgentAction}
+      />
+    );
+  }
+
+  return (
+    <div className="chat-custom-card">
+      <div className="card-header">
+        <span>智能体动作</span>
+        <span className="folder-pill tag-tool">{agentAction.capability}</span>
+      </div>
+      <div className="card-body">
+        <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+          当前版本暂不支持执行这个动作：{agentAction.action}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function SiteNavigationPlanCard({
+  agentAction,
+  messageId,
+  executingCardId,
+  cardSuccessMessage,
+  cardErrorMessage,
+  selections,
+  setSelections,
+  onExecuteAgentAction,
+}: {
+  agentAction: AgentAction;
+  messageId: string;
+  executingCardId: string | null;
+  cardSuccessMessage: Record<string, string>;
+  cardErrorMessage: Record<string, string>;
+  selections: Record<string, string[]>;
+  setSelections: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+  onExecuteAgentAction: (agentAction: AgentAction, messageId: string) => Promise<void>;
+}) {
+  const preview = agentAction.payload?.preview as SiteNavigationPlanPreview | undefined;
+  const isExecuting = executingCardId === messageId;
+  const successMsg = cardSuccessMessage[messageId];
+  const errMsg = cardErrorMessage[messageId];
+  const selectedIds = selections[messageId] || [];
+
+  if (!preview || preview.items.length === 0) {
+    return (
+      <div className="chat-custom-card">
+        <div className="card-header">
+          <span>网址导航规划</span>
+        </div>
+        <div className="card-body">
+          <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>未生成可保存的网站方案。</p>
+        </div>
+      </div>
+    );
+  }
+
+  const groupedItems = preview.items.reduce<Record<string, SiteNavigationPlanPreview['items']>>((groups, item) => {
+    groups[item.categoryLabel] = groups[item.categoryLabel] || [];
+    groups[item.categoryLabel].push(item);
+    return groups;
+  }, {});
+
+  const selectableIds = preview.items.filter((item) => !item.duplicate).map((item) => item.id);
+  const selectedCount = selectedIds.filter((id) => selectableIds.includes(id)).length;
+  const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+
+  const toggleItem = (id: string) => {
+    if (successMsg) return;
+    setSelections((prev) => {
+      const current = prev[messageId] || [];
+      return {
+        ...prev,
+        [messageId]: current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+      };
+    });
+  };
+
+  const toggleAll = () => {
+    if (successMsg) return;
+    setSelections((prev) => ({
+      ...prev,
+      [messageId]: allSelected ? [] : selectableIds,
+    }));
+  };
+
+  return (
+    <div className="chat-custom-card site-navigation-plan-card">
+      <div className="card-header">
+        <span>网址导航规划方案</span>
+        <span className="folder-pill tag-tool">共 {preview.items.length} 个网站</span>
+      </div>
+      <div className="card-body">
+        <div className="site-plan-summary">
+          {agentAction.summary && <span>{agentAction.summary}</span>}
+          {preview.newTopCategories.length > 0 && (
+            <span className="site-plan-chip">新建一级 {preview.newTopCategories.length}</span>
+          )}
+          {preview.newChildCategories.length > 0 && (
+            <span className="site-plan-chip">新建二级 {preview.newChildCategories.length}</span>
+          )}
+          {preview.duplicateCount > 0 && (
+            <span className="site-plan-chip warning">重复 {preview.duplicateCount}</span>
+          )}
+        </div>
+
+        <div className="site-plan-list">
+          {Object.entries(groupedItems).map(([categoryLabel, items]) => (
+            <div key={categoryLabel} className="site-plan-group">
+              <div className="site-plan-group-title">
+                <Folder size={14} />
+                <span>{categoryLabel}</span>
+              </div>
+              <div className="site-plan-items">
+                {items.map((item) => {
+                  const checked = selectedIds.includes(item.id);
+                  const disabled = Boolean(successMsg) || item.duplicate;
+                  return (
+                    <label
+                      key={item.id}
+                      className={`site-plan-row${checked ? ' selected' : ''}${item.duplicate ? ' duplicate' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => toggleItem(item.id)}
+                      />
+                      <BookmarkFavicon url={item.url} className="site-plan-icon" size={24} />
+                      <div className="site-plan-main">
+                        <div className="site-plan-title-row">
+                          <strong title={item.title}>{item.title}</strong>
+                          {item.categoryStatus === 'existing' && <span className="site-plan-badge">复用分类</span>}
+                          {item.categoryStatus === 'new-top' && <span className="site-plan-badge create">新建一级</span>}
+                          {item.categoryStatus === 'new-child' && <span className="site-plan-badge create">新建二级</span>}
+                          {item.duplicate && <span className="site-plan-badge duplicate">已存在</span>}
+                        </div>
+                        <small title={item.url}>{item.url}</small>
+                        {(item.desc || item.reason) && (
+                          <p>{item.desc || item.reason}</p>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {errMsg && (
+          <div className="ai-error-box" style={{ marginTop: '10px', marginBottom: 0 }}>
+            <XCircle size={16} />
+            <span>{errMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div className="ai-info-warning-box" style={{ marginTop: '10px', marginBottom: 0, backgroundColor: 'rgba(16, 185, 129, 0.1)', borderColor: '#10b981', color: '#10b981' }}>
+            <CheckCircle2 size={16} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+      </div>
+
+      {!successMsg && (
+        <div className="card-footer site-plan-footer">
+          <button className="secondary" onClick={toggleAll} disabled={selectableIds.length === 0}>
+            {allSelected ? '取消全选' : '全选可保存项'}
+          </button>
+          <span>已勾选 {selectedCount} 个</span>
+          <button
+            className="primary highlight"
+            disabled={isExecuting || selectedCount === 0}
+            onClick={() => onExecuteAgentAction(agentAction, messageId)}
+          >
+            {isExecuting ? <Loader2 className="animate-spin" size={14} /> : <Check size={14} />}
+            {isExecuting ? '正在保存...' : '确认保存到网址导航'}
           </button>
         </div>
       )}
