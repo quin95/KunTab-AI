@@ -5050,6 +5050,26 @@ select:focus {
   border-top-right-radius: 4px;
 }
 
+.chat-link {
+  color: var(--primary);
+  text-decoration: underline;
+  word-break: break-all;
+  transition: opacity 0.2s ease;
+}
+
+.chat-link:hover {
+  opacity: 0.85;
+}
+
+.chat-message-row.user .chat-link {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.chat-message-row.user .chat-link:hover {
+  opacity: 0.9;
+}
+
 .chat-message-row.assistant .chat-bubble {
   background: var(--surface);
   border: 1px solid var(--line);

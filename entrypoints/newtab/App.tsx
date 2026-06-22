@@ -4248,7 +4248,7 @@ function MarkdownText({ text }: { text: string }) {
       }
       if (token.startsWith('http://') || token.startsWith('https://')) {
         return (
-          <a key={idx} href={token} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+          <a key={idx} href={token} target="_blank" rel="noopener noreferrer" className="chat-link">
             {token}
           </a>
         );
