@@ -209,6 +209,12 @@ npm run zip:firefox
 
 ---
 
+## 🔗 友情链接
+
+- [Linux.do](https://linux.do/)
+
+---
+
 ## 📄 开源协议
 
 本项目基于 MIT 协议开源 - 详情请参阅 [LICENSE](LICENSE) 文件。

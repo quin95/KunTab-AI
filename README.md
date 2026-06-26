@@ -209,6 +209,12 @@ To run the built version on your daily browser:
 
 ---
 
+## 🔗 Friendly Links
+
+- [Linux.do](https://linux.do/)
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
